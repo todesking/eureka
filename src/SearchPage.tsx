@@ -8,10 +8,9 @@ let extractorPromise: Promise<FeatureExtractionPipelineType> | null = null;
 function getExtractor(): Promise<FeatureExtractionPipelineType> {
   if (!extractorPromise) {
     // TODO: cast needed due to @huggingface/transformers union type being too complex for TypeScript (TS2590)
-    extractorPromise = pipeline(
-      'feature-extraction',
-      'Xenova/multilingual-e5-small',
-    ) as unknown as Promise<FeatureExtractionPipelineType>;
+    extractorPromise = pipeline('feature-extraction', 'Xenova/multilingual-e5-small', {
+      dtype: 'q8',
+    }) as unknown as Promise<FeatureExtractionPipelineType>;
   }
   return extractorPromise;
 }

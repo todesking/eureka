@@ -29,13 +29,13 @@ const rawEntries = [
 
 console.log(`Loaded ${rawEntries.length} entries, computing embeddings...`)
 
-const extractor = await pipeline('feature-extraction', 'Xenova/multilingual-e5-small')
+const extractor = await pipeline('feature-extraction', 'Xenova/multilingual-e5-small', { dtype: 'fp32' })
 
 const entries: Entry[] = []
 for (let i = 0; i < rawEntries.length; i++) {
   const raw = rawEntries[i]!
   if (i % 100 === 0) console.log(`  ${i}/${rawEntries.length}`)
-  const text = 'passage: ' + raw.feature.replace(/^.*?＝/, '')
+  const text = 'query: ' + raw.feature.replace(/^.*?＝/, '')
   const out = await extractor(text, { pooling: 'mean', normalize: true })
   entries.push({ ...raw, embedding: Array.from(out.data as Float32Array) })
 }
