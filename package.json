@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "csv-to-json": "jiti scripts/csv-to-json.ts",
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "jiti scripts/csv-to-json.ts && tsc && vite build",
     "preview": "vite preview",
     "format": "prettier --write src",
     "format:check": "prettier --check src",
