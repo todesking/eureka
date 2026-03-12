@@ -28,6 +28,12 @@ export default function SearchPage() {
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<typeof entries>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [inputValue, setInputValue] = useState(q);
+  const isComposing = useRef(false);
+
+  useEffect(() => {
+    if (!isComposing.current) setInputValue(q);
+  }, [q]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -71,8 +77,20 @@ export default function SearchPage() {
       <h1>ユリイカ・現代思想 特集検索</h1>
       <div style={{ marginBottom: '1rem' }}>
         <input
-          value={q}
-          onChange={(e) => setSearchParams(e.target.value ? { q: e.target.value } : {})}
+          value={inputValue}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            if (!isComposing.current) {
+              setSearchParams(e.target.value ? { q: e.target.value } : {});
+            }
+          }}
+          onCompositionStart={() => { isComposing.current = true; }}
+          onCompositionEnd={(e) => {
+            isComposing.current = false;
+            const v = e.currentTarget.value;
+            setInputValue(v);
+            setSearchParams(v ? { q: v } : {});
+          }}
           placeholder="特集タイトルで検索..."
           style={{ width: '100%', padding: '0.5rem', fontSize: '1rem', boxSizing: 'border-box' }}
         />
