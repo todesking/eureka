@@ -12,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { motion, AnimatePresence } from 'framer-motion';
 
 let extractorPromise: Promise<FeatureExtractionPipelineType> | null = null;
 
@@ -40,8 +41,16 @@ export default function SearchPage() {
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const urlDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [inputValue, setInputValue] = useState(q);
   const isComposing = useRef(false);
+
+  function updateSearchParams(value: string) {
+    if (urlDebounceRef.current) clearTimeout(urlDebounceRef.current);
+    urlDebounceRef.current = setTimeout(() => {
+      setSearchParams(value ? { q: value } : {});
+    }, 800);
+  }
 
   useEffect(() => {
     if (!isComposing.current) setInputValue(q);
@@ -91,101 +100,113 @@ export default function SearchPage() {
     };
   }, [q, entries, dataLoading]);
 
-  const displayResults: SearchResult[] = q === '' ? entries : results;
   const isLoading = dataLoading || searching;
+
+  const inputArea = (
+    <motion.div layoutId="search-area" className={q === '' ? 'w-full max-w-xl px-6' : undefined}>
+      <h1 className="text-2xl font-bold tracking-tight mb-6">ユリイカ・現代思想 特集検索</h1>
+      <Input
+        value={inputValue}
+        onChange={(e) => {
+          setInputValue(e.target.value);
+          if (!isComposing.current) {
+            updateSearchParams(e.target.value);
+          }
+        }}
+        onCompositionStart={() => {
+          isComposing.current = true;
+        }}
+        onCompositionEnd={(e) => {
+          isComposing.current = false;
+          const v = e.currentTarget.value;
+          setInputValue(v);
+          updateSearchParams(v);
+        }}
+        placeholder="特集タイトルで検索..."
+        className="mb-6 bg-zinc-900 border-zinc-700 placeholder:text-zinc-500"
+      />
+    </motion.div>
+  );
+
+  if (q === '') {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-50 flex items-center justify-center">
+        {inputArea}
+      </div>
+    );
+  }
+
+  const displayResults: SearchResult[] = results;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
       <div className="max-w-5xl mx-auto px-6 py-10">
-        <h1 className="text-2xl font-bold tracking-tight mb-6">ユリイカ・現代思想 特集検索</h1>
-        <Input
-          value={inputValue}
-          onChange={(e) => {
-            setInputValue(e.target.value);
-            if (!isComposing.current) {
-              setSearchParams(e.target.value ? { q: e.target.value } : {});
-            }
-          }}
-          onCompositionStart={() => {
-            isComposing.current = true;
-          }}
-          onCompositionEnd={(e) => {
-            isComposing.current = false;
-            const v = e.currentTarget.value;
-            setInputValue(v);
-            setSearchParams(v ? { q: v } : {});
-          }}
-          placeholder="特集タイトルで検索..."
-          className="mb-6 bg-zinc-900 border-zinc-700 placeholder:text-zinc-500"
-        />
+        {inputArea}
 
-        {isLoading && <p className="text-zinc-400 animate-pulse">読み込み中...</p>}
+        <AnimatePresence>
+          <motion.div
+            key="results"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {isLoading && <p className="text-zinc-400 animate-pulse">読み込み中...</p>}
 
-        {!isLoading && displayResults.length === 0 && <p className="text-zinc-400">該当なし</p>}
+            {!isLoading && displayResults.length === 0 && <p className="text-zinc-400">該当なし</p>}
 
-        {!isLoading && displayResults.length > 0 && (
-          <Table>
-            <TableHeader>
-              <TableRow className="border-zinc-800 hover:bg-transparent">
-                <TableHead className="text-zinc-400">書名</TableHead>
-                <TableHead className="text-zinc-400">特集タイトル</TableHead>
-                <TableHead className="text-zinc-400">雑誌名</TableHead>
-                <TableHead className="text-zinc-400">リンク</TableHead>
-                {q !== '' && (
-                  <TableHead className="text-zinc-400 text-right">queryスコア</TableHead>
-                )}
-                {q !== '' && (
-                  <TableHead className="text-zinc-400 text-right">passageスコア</TableHead>
-                )}
-                {q !== '' && <TableHead className="text-zinc-400 text-right">スコア</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {displayResults.map((entry, i) => (
-                <TableRow key={i} className="border-zinc-800 hover:bg-zinc-900/50">
-                  <TableCell className="text-zinc-100">{entry.title}</TableCell>
-                  <TableCell className="text-zinc-100">{entry.feature}</TableCell>
-                  <TableCell>
-                    <Badge variant={entry.source === 'ユリイカ' ? 'default' : 'secondary'}>
-                      {entry.source}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <a
-                      href={entry.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-zinc-400 hover:text-zinc-100 underline underline-offset-2 transition-colors"
-                    >
-                      詳細
-                    </a>
-                  </TableCell>
-                  {q !== '' && (
-                    <TableCell className="font-mono text-right text-sm text-zinc-400">
-                      {entry.queryScore !== undefined ? entry.queryScore.toFixed(3) : ''}
-                    </TableCell>
-                  )}
-                  {q !== '' && (
-                    <TableCell className="font-mono text-right text-sm text-zinc-400">
-                      {entry.passageScore !== undefined ? entry.passageScore.toFixed(3) : ''}
-                    </TableCell>
-                  )}
-                  {q !== '' && (
-                    <TableCell className="font-mono text-right text-sm text-zinc-400">
-                      {entry.score !== undefined ? entry.score.toFixed(3) : ''}
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+            {!isLoading && displayResults.length > 0 && (
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-zinc-800 hover:bg-transparent">
+                    <TableHead className="text-zinc-400">書名</TableHead>
+                    <TableHead className="text-zinc-400">特集タイトル</TableHead>
+                    <TableHead className="text-zinc-400">雑誌名</TableHead>
+                    <TableHead className="text-zinc-400">リンク</TableHead>
+                    <TableHead className="text-zinc-400 text-right">queryスコア</TableHead>
+                    <TableHead className="text-zinc-400 text-right">passageスコア</TableHead>
+                    <TableHead className="text-zinc-400 text-right">スコア</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {displayResults.map((entry, i) => (
+                    <TableRow key={i} className="border-zinc-800 hover:bg-zinc-900/50">
+                      <TableCell className="text-zinc-100">{entry.title}</TableCell>
+                      <TableCell className="text-zinc-100">{entry.feature}</TableCell>
+                      <TableCell>
+                        <Badge variant={entry.source === 'ユリイカ' ? 'default' : 'secondary'}>
+                          {entry.source}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <a
+                          href={entry.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-zinc-400 hover:text-zinc-100 underline underline-offset-2 transition-colors"
+                        >
+                          詳細
+                        </a>
+                      </TableCell>
+                      <TableCell className="font-mono text-right text-sm text-zinc-400">
+                        {entry.queryScore !== undefined ? entry.queryScore.toFixed(3) : ''}
+                      </TableCell>
+                      <TableCell className="font-mono text-right text-sm text-zinc-400">
+                        {entry.passageScore !== undefined ? entry.passageScore.toFixed(3) : ''}
+                      </TableCell>
+                      <TableCell className="font-mono text-right text-sm text-zinc-400">
+                        {entry.score !== undefined ? entry.score.toFixed(3) : ''}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
 
-        {!isLoading && (
-          <p className="text-sm text-zinc-400 mt-3">
-            {displayResults.length} 件{q !== '' && '（上位50件）'}
-          </p>
-        )}
+            {!isLoading && (
+              <p className="text-sm text-zinc-400 mt-3">{displayResults.length} 件（上位50件）</p>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
