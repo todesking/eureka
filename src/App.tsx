@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import SearchPage from './SearchPage'
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import SearchPage from './SearchPage';
 
 export default function App() {
   return (
@@ -8,5 +8,5 @@ export default function App() {
         <Route path="/" element={<SearchPage />} />
       </Routes>
     </BrowserRouter>
-  )
+  );
 }

@@ -1,25 +1,28 @@
-import { useSearchParams } from 'react-router-dom'
-import { useData } from './useData'
+import { useSearchParams } from 'react-router-dom';
+import { useData } from './useData';
 
 export default function SearchPage() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const q = searchParams.get('q') ?? ''
-  const { entries, loading } = useData()
+  const [searchParams, setSearchParams] = useSearchParams();
+  const q = searchParams.get('q') ?? '';
+  const { entries, loading } = useData();
 
-  const filtered = q === ''
-    ? entries
-    : entries.filter((e) => e.feature.includes(q))
+  const filtered = q === '' ? entries : entries.filter((e) => e.feature.includes(q));
 
   function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const input = e.currentTarget.elements.namedItem('q') as HTMLInputElement
-    setSearchParams(input.value ? { q: input.value } : {})
+    e.preventDefault();
+    const input = e.currentTarget.elements.namedItem('q') as HTMLInputElement;
+    setSearchParams(input.value ? { q: input.value } : {});
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: '2rem auto', padding: '0 1rem', fontFamily: 'sans-serif' }}>
+    <div
+      style={{ maxWidth: 900, margin: '2rem auto', padding: '0 1rem', fontFamily: 'sans-serif' }}
+    >
       <h1>ユリイカ・現代思想 特集検索</h1>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+      <form
+        onSubmit={handleSubmit}
+        style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}
+      >
         <input
           name="q"
           defaultValue={q}
@@ -69,5 +72,5 @@ export default function SearchPage() {
         </p>
       )}
     </div>
-  )
+  );
 }
