@@ -51,7 +51,7 @@ export default function SearchPage() {
       setSearching(true);
       void (async () => {
         const extractor = await getExtractor();
-        const out = await extractor(q, { pooling: 'mean', normalize: true });
+        const out = await extractor(`query: ${q}`, { pooling: 'mean', normalize: true });
         const queryVec = Array.from(out.data as Float32Array);
         const scored = entries.map((e) => ({
           entry: e,

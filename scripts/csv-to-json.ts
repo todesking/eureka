@@ -35,7 +35,8 @@ const entries: Entry[] = []
 for (let i = 0; i < rawEntries.length; i++) {
   const raw = rawEntries[i]!
   if (i % 100 === 0) console.log(`  ${i}/${rawEntries.length}`)
-  const out = await extractor(raw.feature, { pooling: 'mean', normalize: true })
+  const text = 'passage: ' + raw.feature.replace(/^.*?＝/, '')
+  const out = await extractor(text, { pooling: 'mean', normalize: true })
   entries.push({ ...raw, embedding: Array.from(out.data as Float32Array) })
 }
 
