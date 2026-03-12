@@ -2,6 +2,16 @@ import { useSearchParams } from 'react-router-dom';
 import { useData, type Entry } from './useData';
 import { useState, useEffect, useRef } from 'react';
 import { pipeline, type FeatureExtractionPipelineType } from '@huggingface/transformers';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 
 let extractorPromise: Promise<FeatureExtractionPipelineType> | null = null;
 
@@ -85,12 +95,10 @@ export default function SearchPage() {
   const isLoading = dataLoading || searching;
 
   return (
-    <div
-      style={{ maxWidth: 900, margin: '2rem auto', padding: '0 1rem', fontFamily: 'sans-serif' }}
-    >
-      <h1>ユリイカ・現代思想 特集検索</h1>
-      <div style={{ marginBottom: '1rem' }}>
-        <input
+    <div className="min-h-screen bg-zinc-950 text-zinc-50">
+      <div className="max-w-5xl mx-auto px-6 py-10">
+        <h1 className="text-2xl font-bold tracking-tight mb-6">ユリイカ・現代思想 特集検索</h1>
+        <Input
           value={inputValue}
           onChange={(e) => {
             setInputValue(e.target.value);
@@ -108,64 +116,77 @@ export default function SearchPage() {
             setSearchParams(v ? { q: v } : {});
           }}
           placeholder="特集タイトルで検索..."
-          style={{ width: '100%', padding: '0.5rem', fontSize: '1rem', boxSizing: 'border-box' }}
+          className="mb-6 bg-zinc-900 border-zinc-700 placeholder:text-zinc-500"
         />
+
+        {isLoading && <p className="text-zinc-400 animate-pulse">読み込み中...</p>}
+
+        {!isLoading && displayResults.length === 0 && <p className="text-zinc-400">該当なし</p>}
+
+        {!isLoading && displayResults.length > 0 && (
+          <Table>
+            <TableHeader>
+              <TableRow className="border-zinc-800 hover:bg-transparent">
+                <TableHead className="text-zinc-400">書名</TableHead>
+                <TableHead className="text-zinc-400">特集タイトル</TableHead>
+                <TableHead className="text-zinc-400">雑誌名</TableHead>
+                <TableHead className="text-zinc-400">リンク</TableHead>
+                {q !== '' && (
+                  <TableHead className="text-zinc-400 text-right">queryスコア</TableHead>
+                )}
+                {q !== '' && (
+                  <TableHead className="text-zinc-400 text-right">passageスコア</TableHead>
+                )}
+                {q !== '' && <TableHead className="text-zinc-400 text-right">スコア</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {displayResults.map((entry, i) => (
+                <TableRow key={i} className="border-zinc-800 hover:bg-zinc-900/50">
+                  <TableCell className="text-zinc-100">{entry.title}</TableCell>
+                  <TableCell className="text-zinc-100">{entry.feature}</TableCell>
+                  <TableCell>
+                    <Badge variant={entry.source === 'ユリイカ' ? 'default' : 'secondary'}>
+                      {entry.source}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <a
+                      href={entry.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-zinc-400 hover:text-zinc-100 underline underline-offset-2 transition-colors"
+                    >
+                      詳細
+                    </a>
+                  </TableCell>
+                  {q !== '' && (
+                    <TableCell className="font-mono text-right text-sm text-zinc-400">
+                      {entry.queryScore !== undefined ? entry.queryScore.toFixed(3) : ''}
+                    </TableCell>
+                  )}
+                  {q !== '' && (
+                    <TableCell className="font-mono text-right text-sm text-zinc-400">
+                      {entry.passageScore !== undefined ? entry.passageScore.toFixed(3) : ''}
+                    </TableCell>
+                  )}
+                  {q !== '' && (
+                    <TableCell className="font-mono text-right text-sm text-zinc-400">
+                      {entry.score !== undefined ? entry.score.toFixed(3) : ''}
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+
+        {!isLoading && (
+          <p className="text-sm text-zinc-400 mt-3">
+            {displayResults.length} 件{q !== '' && '（上位50件）'}
+          </p>
+        )}
       </div>
-
-      {isLoading && <p>読み込み中...</p>}
-
-      {!isLoading && displayResults.length === 0 && <p>該当なし</p>}
-
-      {!isLoading && displayResults.length > 0 && (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '2px solid #ccc', textAlign: 'left' }}>
-              <th style={{ padding: '0.5rem' }}>書名</th>
-              <th style={{ padding: '0.5rem' }}>特集タイトル</th>
-              <th style={{ padding: '0.5rem' }}>雑誌名</th>
-              <th style={{ padding: '0.5rem' }}>リンク</th>
-              {q !== '' && <th style={{ padding: '0.5rem' }}>queryスコア</th>}
-              {q !== '' && <th style={{ padding: '0.5rem' }}>passageスコア</th>}
-              {q !== '' && <th style={{ padding: '0.5rem' }}>スコア</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {displayResults.map((entry, i) => (
-              <tr key={i} style={{ borderBottom: '1px solid #eee' }}>
-                <td style={{ padding: '0.5rem' }}>{entry.title}</td>
-                <td style={{ padding: '0.5rem' }}>{entry.feature}</td>
-                <td style={{ padding: '0.5rem' }}>{entry.source}</td>
-                <td style={{ padding: '0.5rem' }}>
-                  <a href={entry.url} target="_blank" rel="noreferrer">
-                    詳細
-                  </a>
-                </td>
-                {q !== '' && (
-                  <td style={{ padding: '0.5rem' }}>
-                    {entry.queryScore !== undefined ? entry.queryScore.toFixed(3) : ''}
-                  </td>
-                )}
-                {q !== '' && (
-                  <td style={{ padding: '0.5rem' }}>
-                    {entry.passageScore !== undefined ? entry.passageScore.toFixed(3) : ''}
-                  </td>
-                )}
-                {q !== '' && (
-                  <td style={{ padding: '0.5rem' }}>
-                    {entry.score !== undefined ? entry.score.toFixed(3) : ''}
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      {!isLoading && (
-        <p style={{ color: '#888', marginTop: '0.5rem', fontSize: '0.9rem' }}>
-          {displayResults.length} 件{q !== '' && '（上位50件）'}
-        </p>
-      )}
     </div>
   );
 }
