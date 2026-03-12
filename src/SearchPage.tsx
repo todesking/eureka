@@ -1,20 +1,17 @@
 import { useSearchParams } from 'react-router-dom';
 import { useData } from './useData';
 import { useState, useEffect, useRef } from 'react';
-import { type FeatureExtractionPipelineType } from '@huggingface/transformers';
+import { pipeline, type FeatureExtractionPipelineType } from '@huggingface/transformers';
 
 let extractorPromise: Promise<FeatureExtractionPipelineType> | null = null;
 
 function getExtractor(): Promise<FeatureExtractionPipelineType> {
   if (!extractorPromise) {
-    extractorPromise = (async () => {
-      const { pipeline } = await import('@huggingface/transformers');
-      // TODO: cast needed due to @huggingface/transformers union type being too complex for TypeScript (TS2590)
-      return (await pipeline(
-        'feature-extraction',
-        'Xenova/multilingual-e5-small',
-      )) as unknown as FeatureExtractionPipelineType;
-    })();
+    // TODO: cast needed due to @huggingface/transformers union type being too complex for TypeScript (TS2590)
+    extractorPromise = pipeline(
+      'feature-extraction',
+      'Xenova/multilingual-e5-small',
+    ) as unknown as Promise<FeatureExtractionPipelineType>;
   }
   return extractorPromise;
 }
