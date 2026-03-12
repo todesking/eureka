@@ -21,7 +21,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
   return dot; // normalize: true なのでL2正規化済み → 内積 = コサイン類似度
 }
 
-type SearchResult = Entry & { score?: number };
+type SearchResult = Entry & { score?: number; queryScore?: number; passageScore?: number };
 
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -52,14 +52,26 @@ export default function SearchPage() {
       setSearching(true);
       void (async () => {
         const extractor = await getExtractor();
-        const out = await extractor(`query: ${q}`, { pooling: 'mean', normalize: true });
-        const queryVec = Array.from(out.data as Float32Array);
-        const scored = entries.map((e) => ({
-          entry: e,
-          score: cosineSimilarity(queryVec, e.embedding),
-        }));
+        const [outQuery, outPassage] = await Promise.all([
+          extractor(`query: ${q}`, { pooling: 'mean', normalize: true }),
+          extractor(`passage: ${q}`, { pooling: 'mean', normalize: true }),
+        ]);
+        const queryVec = Array.from(outQuery.data as Float32Array);
+        const passageVec = Array.from(outPassage.data as Float32Array);
+        const scored = entries.map((e) => {
+          const queryScore = cosineSimilarity(queryVec, e.embedding);
+          const passageScore = cosineSimilarity(passageVec, e.embedding);
+          return { entry: e, score: Math.max(queryScore, passageScore), queryScore, passageScore };
+        });
         scored.sort((a, b) => b.score - a.score);
-        setResults(scored.slice(0, 50).map((s) => ({ ...s.entry, score: s.score })));
+        setResults(
+          scored.slice(0, 50).map((s) => ({
+            ...s.entry,
+            score: s.score,
+            queryScore: s.queryScore,
+            passageScore: s.passageScore,
+          })),
+        );
         setSearching(false);
       })();
     }, 300);
@@ -112,6 +124,8 @@ export default function SearchPage() {
               <th style={{ padding: '0.5rem' }}>特集タイトル</th>
               <th style={{ padding: '0.5rem' }}>雑誌名</th>
               <th style={{ padding: '0.5rem' }}>リンク</th>
+              {q !== '' && <th style={{ padding: '0.5rem' }}>queryスコア</th>}
+              {q !== '' && <th style={{ padding: '0.5rem' }}>passageスコア</th>}
               {q !== '' && <th style={{ padding: '0.5rem' }}>スコア</th>}
             </tr>
           </thead>
@@ -126,6 +140,16 @@ export default function SearchPage() {
                     詳細
                   </a>
                 </td>
+                {q !== '' && (
+                  <td style={{ padding: '0.5rem' }}>
+                    {entry.queryScore !== undefined ? entry.queryScore.toFixed(3) : ''}
+                  </td>
+                )}
+                {q !== '' && (
+                  <td style={{ padding: '0.5rem' }}>
+                    {entry.passageScore !== undefined ? entry.passageScore.toFixed(3) : ''}
+                  </td>
+                )}
                 {q !== '' && (
                   <td style={{ padding: '0.5rem' }}>
                     {entry.score !== undefined ? entry.score.toFixed(3) : ''}
