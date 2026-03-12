@@ -1,16 +1,20 @@
 import { useSearchParams } from 'react-router-dom';
 import { useData } from './useData';
 import { useState, useEffect, useRef } from 'react';
-// TODO: replace `any` with proper type once @huggingface/transformers union type issue is resolved
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let extractorPromise: Promise<any> | null = null;
+import { type FeatureExtractionPipelineType } from '@huggingface/transformers';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getExtractor(): Promise<any> {
+let extractorPromise: Promise<FeatureExtractionPipelineType> | null = null;
+
+function getExtractor(): Promise<FeatureExtractionPipelineType> {
   if (!extractorPromise) {
-    extractorPromise = import('@huggingface/transformers').then(({ pipeline }) =>
-      pipeline('feature-extraction', 'Xenova/multilingual-e5-small'),
-    );
+    extractorPromise = (async () => {
+      const { pipeline } = await import('@huggingface/transformers');
+      // TODO: cast needed due to @huggingface/transformers union type being too complex for TypeScript (TS2590)
+      return (await pipeline(
+        'feature-extraction',
+        'Xenova/multilingual-e5-small',
+      )) as unknown as FeatureExtractionPipelineType;
+    })();
   }
   return extractorPromise;
 }
@@ -49,11 +53,8 @@ export default function SearchPage() {
     debounceRef.current = setTimeout(() => {
       setSearching(true);
       void (async () => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const extractor = await getExtractor();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
         const out = await extractor(q, { pooling: 'mean', normalize: true });
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         const queryVec = Array.from(out.data as Float32Array);
         const scored = entries.map((e) => ({
           entry: e,
