@@ -5,6 +5,7 @@ export interface Entry {
   feature: string;
   url: string;
   source: 'ユリイカ' | '現代思想';
+  embedding: number[];
 }
 
 export function useData() {

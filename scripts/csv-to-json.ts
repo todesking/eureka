@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs'
+import { pipeline } from '@huggingface/transformers'
 
 type Source = 'ユリイカ' | '現代思想'
 
@@ -7,9 +8,10 @@ interface Entry {
   feature: string
   url: string
   source: Source
+  embedding: number[]
 }
 
-function parseCsv(text: string, source: Source): Entry[] {
+function parseCsv(text: string, source: Source): Omit<Entry, 'embedding'>[] {
   return text
     .split('\n')
     .slice(1)
@@ -20,10 +22,22 @@ function parseCsv(text: string, source: Source): Entry[] {
     })
 }
 
-const entries: Entry[] = [
+const rawEntries = [
   ...parseCsv(readFileSync('eureka.csv', 'utf-8'), 'ユリイカ'),
   ...parseCsv(readFileSync('gendai_shiso.csv', 'utf-8'), '現代思想'),
 ]
+
+console.log(`Loaded ${rawEntries.length} entries, computing embeddings...`)
+
+const extractor = await pipeline('feature-extraction', 'Xenova/multilingual-e5-small')
+
+const entries: Entry[] = []
+for (let i = 0; i < rawEntries.length; i++) {
+  const raw = rawEntries[i]!
+  if (i % 100 === 0) console.log(`  ${i}/${rawEntries.length}`)
+  const out = await extractor(raw.feature, { pooling: 'mean', normalize: true })
+  entries.push({ ...raw, embedding: Array.from(out.data as Float32Array) })
+}
 
 writeFileSync('public/data.json', JSON.stringify(entries))
 console.log(`Generated public/data.json (${entries.length} entries)`)

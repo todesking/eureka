@@ -1,12 +1,68 @@
 import { useSearchParams } from 'react-router-dom';
 import { useData } from './useData';
+import { useState, useEffect, useRef } from 'react';
+// TODO: replace `any` with proper type once @huggingface/transformers union type issue is resolved
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let extractorPromise: Promise<any> | null = null;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getExtractor(): Promise<any> {
+  if (!extractorPromise) {
+    extractorPromise = import('@huggingface/transformers').then(({ pipeline }) =>
+      pipeline('feature-extraction', 'Xenova/multilingual-e5-small'),
+    );
+  }
+  return extractorPromise;
+}
+
+function cosineSimilarity(a: number[], b: number[]): number {
+  let dot = 0;
+  for (let i = 0; i < a.length; i++) dot += a[i]! * b[i]!;
+  return dot; // normalize: true なのでL2正規化済み → 内積 = コサイン類似度
+}
 
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const q = searchParams.get('q') ?? '';
-  const { entries, loading } = useData();
+  const { entries, loading: dataLoading } = useData();
+  const [searching, setSearching] = useState(false);
+  const [results, setResults] = useState<typeof entries>([]);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const filtered = q === '' ? entries : entries.filter((e) => e.feature.includes(q));
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (q === '') {
+      setResults(entries);
+      setSearching(false);
+      return;
+    }
+
+    if (dataLoading) return;
+
+    debounceRef.current = setTimeout(() => {
+      setSearching(true);
+      void (async () => {
+        const extractor = await getExtractor();
+        const out = await extractor(q, { pooling: 'mean', normalize: true });
+        const queryVec = Array.from(out.data as Float32Array);
+        const scored = entries.map((e) => ({
+          entry: e,
+          score: cosineSimilarity(queryVec, e.embedding),
+        }));
+        scored.sort((a, b) => b.score - a.score);
+        setResults(scored.slice(0, 50).map((s) => s.entry));
+        setSearching(false);
+      })();
+    }, 300);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [q, entries, dataLoading]);
+
+  const displayResults = q === '' ? entries : results;
+  const isLoading = dataLoading || searching;
 
   return (
     <div
@@ -22,11 +78,11 @@ export default function SearchPage() {
         />
       </div>
 
-      {loading && <p>読み込み中...</p>}
+      {isLoading && <p>読み込み中...</p>}
 
-      {!loading && filtered.length === 0 && <p>該当なし</p>}
+      {!isLoading && displayResults.length === 0 && <p>該当なし</p>}
 
-      {!loading && filtered.length > 0 && (
+      {!isLoading && displayResults.length > 0 && (
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #ccc', textAlign: 'left' }}>
@@ -37,7 +93,7 @@ export default function SearchPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((entry, i) => (
+            {displayResults.map((entry, i) => (
               <tr key={i} style={{ borderBottom: '1px solid #eee' }}>
                 <td style={{ padding: '0.5rem' }}>{entry.title}</td>
                 <td style={{ padding: '0.5rem' }}>{entry.feature}</td>
@@ -53,9 +109,9 @@ export default function SearchPage() {
         </table>
       )}
 
-      {!loading && (
+      {!isLoading && (
         <p style={{ color: '#888', marginTop: '0.5rem', fontSize: '0.9rem' }}>
-          {filtered.length} 件
+          {displayResults.length} 件{q !== '' && '（上位50件）'}
         </p>
       )}
     </div>
