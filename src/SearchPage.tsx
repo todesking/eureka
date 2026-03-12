@@ -1,5 +1,5 @@
 import { useSearchParams } from 'react-router-dom';
-import { useData } from './useData';
+import { useData, type Entry } from './useData';
 import { useState, useEffect, useRef } from 'react';
 import { pipeline, type FeatureExtractionPipelineType } from '@huggingface/transformers';
 
@@ -21,12 +21,14 @@ function cosineSimilarity(a: number[], b: number[]): number {
   return dot; // normalize: true なのでL2正規化済み → 内積 = コサイン類似度
 }
 
+type SearchResult = Entry & { score?: number };
+
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const q = searchParams.get('q') ?? '';
   const { entries, loading: dataLoading } = useData();
   const [searching, setSearching] = useState(false);
-  const [results, setResults] = useState<typeof entries>([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [inputValue, setInputValue] = useState(q);
   const isComposing = useRef(false);
@@ -57,7 +59,7 @@ export default function SearchPage() {
           score: cosineSimilarity(queryVec, e.embedding),
         }));
         scored.sort((a, b) => b.score - a.score);
-        setResults(scored.slice(0, 50).map((s) => s.entry));
+        setResults(scored.slice(0, 50).map((s) => ({ ...s.entry, score: s.score })));
         setSearching(false);
       })();
     }, 300);
@@ -67,7 +69,7 @@ export default function SearchPage() {
     };
   }, [q, entries, dataLoading]);
 
-  const displayResults = q === '' ? entries : results;
+  const displayResults: SearchResult[] = q === '' ? entries : results;
   const isLoading = dataLoading || searching;
 
   return (
@@ -110,6 +112,7 @@ export default function SearchPage() {
               <th style={{ padding: '0.5rem' }}>特集タイトル</th>
               <th style={{ padding: '0.5rem' }}>雑誌名</th>
               <th style={{ padding: '0.5rem' }}>リンク</th>
+              {q !== '' && <th style={{ padding: '0.5rem' }}>スコア</th>}
             </tr>
           </thead>
           <tbody>
@@ -123,6 +126,11 @@ export default function SearchPage() {
                     詳細
                   </a>
                 </td>
+                {q !== '' && (
+                  <td style={{ padding: '0.5rem' }}>
+                    {entry.score !== undefined ? entry.score.toFixed(3) : ''}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
