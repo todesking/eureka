@@ -17,7 +17,7 @@ function getExtractor(): Promise<any> {
 
 function cosineSimilarity(a: number[], b: number[]): number {
   let dot = 0;
-  for (let i = 0; i < a.length; i++) dot += a[i]! * b[i]!;
+  for (let i = 0; i < a.length; i++) dot += (a[i] ?? 0) * (b[i] ?? 0);
   return dot; // normalize: true なのでL2正規化済み → 内積 = コサイン類似度
 }
 
@@ -49,8 +49,11 @@ export default function SearchPage() {
     debounceRef.current = setTimeout(() => {
       setSearching(true);
       void (async () => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const extractor = await getExtractor();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
         const out = await extractor(q, { pooling: 'mean', normalize: true });
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         const queryVec = Array.from(out.data as Float32Array);
         const scored = entries.map((e) => ({
           entry: e,
@@ -84,7 +87,9 @@ export default function SearchPage() {
               setSearchParams(e.target.value ? { q: e.target.value } : {});
             }
           }}
-          onCompositionStart={() => { isComposing.current = true; }}
+          onCompositionStart={() => {
+            isComposing.current = true;
+          }}
           onCompositionEnd={(e) => {
             isComposing.current = false;
             const v = e.currentTarget.value;
