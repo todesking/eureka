@@ -8,32 +8,19 @@ export default function SearchPage() {
 
   const filtered = q === '' ? entries : entries.filter((e) => e.feature.includes(q));
 
-  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const input = e.currentTarget.elements.namedItem('q') as HTMLInputElement;
-    setSearchParams(input.value ? { q: input.value } : {});
-  }
-
   return (
     <div
       style={{ maxWidth: 900, margin: '2rem auto', padding: '0 1rem', fontFamily: 'sans-serif' }}
     >
       <h1>ユリイカ・現代思想 特集検索</h1>
-      <form
-        onSubmit={handleSubmit}
-        style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}
-      >
+      <div style={{ marginBottom: '1rem' }}>
         <input
-          name="q"
-          defaultValue={q}
-          key={q}
+          value={q}
+          onChange={(e) => setSearchParams(e.target.value ? { q: e.target.value } : {})}
           placeholder="特集タイトルで検索..."
-          style={{ flex: 1, padding: '0.5rem', fontSize: '1rem' }}
+          style={{ width: '100%', padding: '0.5rem', fontSize: '1rem', boxSizing: 'border-box' }}
         />
-        <button type="submit" style={{ padding: '0.5rem 1rem', fontSize: '1rem' }}>
-          検索
-        </button>
-      </form>
+      </div>
 
       {loading && <p>読み込み中...</p>}
 
