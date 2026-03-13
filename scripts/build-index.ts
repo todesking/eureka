@@ -30,7 +30,7 @@ const extractor = await pipeline('feature-extraction', 'Xenova/multilingual-e5-s
 
 const entries: Entry[] = []
 for (let i = 0; i < rawEntries.length; i++) {
-  const raw = rawEntries[i]!
+  const raw = rawEntries[i]
   if (i % 100 === 0) console.log(`  ${i}/${rawEntries.length}`)
   const text = 'query: ' + raw.feature.replace(/^.*?＝/, '')
   const out = await extractor(text, { pooling: 'mean', normalize: true })
