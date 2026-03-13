@@ -11,20 +11,17 @@ interface Entry {
   embedding: number[]
 }
 
-function parseCsv(text: string, source: Source): Omit<Entry, 'embedding'>[] {
-  return text
-    .split('\n')
-    .slice(1)
-    .filter((l) => l.trim() !== '')
-    .map((line) => {
-      const [title, feature, url] = line.split(',')
-      return { title: title ?? '', feature: feature ?? '', url: url?.trim() ?? '', source }
-    })
-}
+type RawEntry = { title: string; feature: string; url: string }
 
 const rawEntries = [
-  ...parseCsv(readFileSync('eureka.csv', 'utf-8'), 'ユリイカ'),
-  ...parseCsv(readFileSync('gendai_shiso.csv', 'utf-8'), '現代思想'),
+  ...(JSON.parse(readFileSync('data/eureka.json', 'utf-8')) as RawEntry[]).map((e) => ({
+    ...e,
+    source: 'ユリイカ' as const,
+  })),
+  ...(JSON.parse(readFileSync('data/gendai_shiso.json', 'utf-8')) as RawEntry[]).map((e) => ({
+    ...e,
+    source: '現代思想' as const,
+  })),
 ]
 
 console.log(`Loaded ${rawEntries.length} entries, computing embeddings...`)

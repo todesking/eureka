@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "csv-to-json": "jiti scripts/csv-to-json.ts",
+    "scrape": "jiti scripts/scrape.ts",
+    "build-index": "jiti scripts/build-index.ts",
     "dev": "vite",
-    "build": "jiti scripts/csv-to-json.ts && tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "format": "prettier --write src",
     "format:check": "prettier --check src",
@@ -13,6 +14,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/jsdom": "^28.0.0",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -20,6 +22,7 @@
     "eslint": "^10.0.3",
     "eslint-config-prettier": "^10.1.8",
     "jiti": "^2.6.1",
+    "jsdom": "^28.1.0",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.57.0",
