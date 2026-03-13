@@ -3,6 +3,7 @@ import { useData, type Entry } from './useData';
 import { useState, useEffect, useRef } from 'react';
 import { pipeline, type FeatureExtractionPipelineType } from '@huggingface/transformers';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -38,12 +39,28 @@ export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const q = searchParams.get('q') ?? '';
   const { entries, loading: dataLoading } = useData();
+  const [showResults, setShowResults] = useState(q !== '');
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const urlDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [inputValue, setInputValue] = useState(q);
   const isComposing = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const prevQ = useRef(q);
+
+  useEffect(() => {
+    if (prevQ.current === '' && q !== '') {
+      inputRef.current?.focus();
+    }
+    prevQ.current = q;
+  }, [q]);
+
+  function submitSearch(value: string) {
+    if (urlDebounceRef.current) clearTimeout(urlDebounceRef.current);
+    setShowResults(true);
+    setSearchParams(value ? { q: value } : {});
+  }
 
   function updateSearchParams(value: string) {
     if (urlDebounceRef.current) clearTimeout(urlDebounceRef.current);
@@ -103,32 +120,45 @@ export default function SearchPage() {
   const isLoading = dataLoading || searching;
 
   const inputArea = (
-    <motion.div layoutId="search-area" className={q === '' ? 'w-full max-w-xl px-6' : undefined}>
+    <motion.div
+      layoutId="search-area"
+      className={!showResults ? 'w-full max-w-xl px-6' : undefined}
+    >
       <h1 className="text-2xl font-bold tracking-tight mb-6">ユリイカ・現代思想 特集検索</h1>
-      <Input
-        value={inputValue}
-        onChange={(e) => {
-          setInputValue(e.target.value);
-          if (!isComposing.current) {
-            updateSearchParams(e.target.value);
-          }
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          submitSearch(inputValue);
         }}
-        onCompositionStart={() => {
-          isComposing.current = true;
-        }}
-        onCompositionEnd={(e) => {
-          isComposing.current = false;
-          const v = e.currentTarget.value;
-          setInputValue(v);
-          updateSearchParams(v);
-        }}
-        placeholder="特集タイトルで検索..."
-        className="mb-6 bg-zinc-900 border-zinc-700 placeholder:text-zinc-500"
-      />
+        className={!showResults ? 'flex gap-2' : undefined}
+      >
+        <Input
+          value={inputValue}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            if (!isComposing.current && showResults) {
+              updateSearchParams(e.target.value);
+            }
+          }}
+          onCompositionStart={() => {
+            isComposing.current = true;
+          }}
+          onCompositionEnd={(e) => {
+            isComposing.current = false;
+            const v = e.currentTarget.value;
+            setInputValue(v);
+            if (showResults) updateSearchParams(v);
+          }}
+          ref={inputRef}
+          placeholder="特集タイトルで検索..."
+          className={`bg-zinc-900 border-zinc-700 placeholder:text-zinc-500 ${!showResults ? '' : 'mb-6'}`}
+        />
+        {!showResults && <Button type="submit">検索</Button>}
+      </form>
     </motion.div>
   );
 
-  if (q === '') {
+  if (!showResults) {
     return (
       <div className="min-h-screen bg-zinc-950 text-zinc-50 flex items-center justify-center">
         {inputArea}
