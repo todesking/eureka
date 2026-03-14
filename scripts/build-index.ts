@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { pipeline } from '@huggingface/transformers';
 
 type Source = 'ユリイカ' | '現代思想';
@@ -24,20 +24,29 @@ const rawEntries = [
   })),
 ];
 
-console.log(`Loaded ${rawEntries.length} entries, computing embeddings...`);
+let existingEntries: Entry[] = [];
+if (existsSync('public/data.json')) {
+  existingEntries = JSON.parse(readFileSync('public/data.json', 'utf-8')) as Entry[];
+}
+const existingUrls = new Set(existingEntries.map((e) => e.url));
+const newRawEntries = rawEntries.filter((e) => !existingUrls.has(e.url));
+
+console.log(
+  `Existing index found, ${existingEntries.length} entries cached, ${newRawEntries.length} new entries to embed`,
+);
 
 const extractor = await pipeline('feature-extraction', 'Xenova/multilingual-e5-small', {
   dtype: 'fp32',
 });
 
-const entries: Entry[] = [];
-for (let i = 0; i < rawEntries.length; i++) {
-  const raw = rawEntries[i];
-  if (i % 100 === 0) console.log(`  ${i}/${rawEntries.length}`);
+const newEntries: Entry[] = [];
+for (let i = 0; i < newRawEntries.length; i++) {
+  const raw = newRawEntries[i];
+  if (i % 100 === 0) console.log(`  ${i}/${newRawEntries.length}`);
   const text = 'query: ' + raw.feature.replace(/^.*?＝/, '');
   const out = await extractor(text, { pooling: 'mean', normalize: true });
-  entries.push({ ...raw, embedding: Array.from(out.data as Float32Array) });
+  newEntries.push({ ...raw, embedding: Array.from(out.data as Float32Array) });
 }
 
-writeFileSync('public/data.json', JSON.stringify(entries));
-console.log(`Generated public/data.json (${entries.length} entries)`);
+writeFileSync('public/data.json', JSON.stringify([...existingEntries, ...newEntries]));
+console.log(`Generated public/data.json (${existingEntries.length + newEntries.length} entries)`);
