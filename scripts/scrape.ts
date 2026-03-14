@@ -1,4 +1,4 @@
-import { writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 
 const BASE_URL = 'https://www.seidosha.co.jp/book/';
@@ -53,18 +53,37 @@ async function scrape(config: {
   years: [number, number];
   out: string;
 }): Promise<void> {
-  const allBooks: Book[] = [];
-  for (let year = config.years[0]; year <= config.years[1]; year++) {
+  let existingBooks: Book[] = [];
+  let startYear = config.years[0];
+
+  if (existsSync(config.out)) {
+    existingBooks = JSON.parse(readFileSync(config.out, 'utf-8')) as Book[];
+    const years = existingBooks.map((b) => parseInt(b.title.match(/(\d{4})年/)?.[1] ?? '0'));
+    const maxYear = Math.max(...years);
+    if (maxYear > 0) {
+      startYear = maxYear;
+      console.log(`[${config.name}] Existing data found, starting from ${startYear}`);
+    }
+  }
+
+  existingBooks = existingBooks.filter((b) => {
+    const year = parseInt(b.title.match(/(\d{4})年/)?.[1] ?? '0');
+    return year < startYear;
+  });
+
+  const newBooks: Book[] = [];
+  for (let year = startYear; year <= config.years[1]; year++) {
     process.stdout.write(`[${config.name}] Fetching ${year}...`);
     try {
       const html = await fetchYear(year, config.catId);
       const books = parseBooks(html, config.filter);
       console.log(` ${books.length} books`);
-      allBooks.push(...books);
+      newBooks.push(...books);
     } catch (e) {
       console.log(` Error: ${e}`);
     }
   }
+  const allBooks = [...existingBooks, ...newBooks];
   writeFileSync(config.out, JSON.stringify(allBooks, null, 2));
   console.log(`\nTotal: ${allBooks.length} entries written to ${config.out}`);
 }
