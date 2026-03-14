@@ -25,9 +25,9 @@ function ResultsTable({ results }: { results: SearchResult[] }) {
           <TableHead className="text-zinc-400">特集タイトル</TableHead>
           <TableHead className="text-zinc-400">雑誌名</TableHead>
           <TableHead className="text-zinc-400">リンク</TableHead>
-          <TableHead className="text-zinc-400 text-right">queryスコア</TableHead>
-          <TableHead className="text-zinc-400 text-right">passageスコア</TableHead>
-          <TableHead className="text-zinc-400 text-right">スコア</TableHead>
+          <TableHead className="text-right text-zinc-400">queryスコア</TableHead>
+          <TableHead className="text-right text-zinc-400">passageスコア</TableHead>
+          <TableHead className="text-right text-zinc-400">スコア</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -45,18 +45,18 @@ function ResultsTable({ results }: { results: SearchResult[] }) {
                 href={entry.url}
                 target="_blank"
                 rel="noreferrer"
-                className="text-zinc-400 hover:text-zinc-100 underline underline-offset-2 transition-colors"
+                className="text-zinc-400 underline underline-offset-2 transition-colors hover:text-zinc-100"
               >
                 詳細
               </a>
             </TableCell>
-            <TableCell className="font-mono text-right text-sm text-zinc-400">
+            <TableCell className="text-right font-mono text-sm text-zinc-400">
               {entry.queryScore !== undefined ? entry.queryScore.toFixed(3) : ''}
             </TableCell>
-            <TableCell className="font-mono text-right text-sm text-zinc-400">
+            <TableCell className="text-right font-mono text-sm text-zinc-400">
               {entry.passageScore !== undefined ? entry.passageScore.toFixed(3) : ''}
             </TableCell>
-            <TableCell className="font-mono text-right text-sm text-zinc-400">
+            <TableCell className="text-right font-mono text-sm text-zinc-400">
               {entry.score !== undefined ? entry.score.toFixed(3) : ''}
             </TableCell>
           </TableRow>
@@ -109,7 +109,7 @@ export default function SearchPage() {
       layoutId="search-area"
       className={!showResults ? 'w-full max-w-xl px-6' : undefined}
     >
-      <h1 className="text-2xl font-bold tracking-tight mb-6">ユリイカ・現代思想 特集検索</h1>
+      <h1 className="mb-6 text-2xl font-bold tracking-tight">ユリイカ・現代思想 特集検索</h1>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -137,7 +137,7 @@ export default function SearchPage() {
           ref={inputRef}
           placeholder="特集タイトルで検索..."
           className={cn(
-            'bg-zinc-900 border-zinc-700 placeholder:text-zinc-500',
+            'border-zinc-700 bg-zinc-900 placeholder:text-zinc-500',
             showResults && 'mb-6',
           )}
         />
@@ -148,7 +148,7 @@ export default function SearchPage() {
 
   if (!showResults) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-50 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-50">
         {inputArea}
       </div>
     );
@@ -156,7 +156,7 @@ export default function SearchPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      <div className="max-w-5xl mx-auto px-6 py-10">
+      <div className="mx-auto max-w-5xl px-6 py-10">
         {inputArea}
 
         <AnimatePresence>
@@ -166,14 +166,14 @@ export default function SearchPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            {isLoading && <p className="text-zinc-400 animate-pulse">読み込み中...</p>}
+            {isLoading && <p className="animate-pulse text-zinc-400">読み込み中...</p>}
 
             {!isLoading && results.length === 0 && <p className="text-zinc-400">該当なし</p>}
 
             {!isLoading && results.length > 0 && <ResultsTable results={results} />}
 
             {!isLoading && (
-              <p className="text-sm text-zinc-400 mt-3">{results.length} 件（上位50件）</p>
+              <p className="mt-3 text-sm text-zinc-400">{results.length} 件（上位50件）</p>
             )}
           </motion.div>
         </AnimatePresence>
