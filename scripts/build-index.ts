@@ -55,6 +55,26 @@ const extractor = await pipeline('feature-extraction', 'Xenova/multilingual-e5-s
   dtype: 'fp32',
 });
 
+const CHECKPOINT_INTERVAL = 100;
+
+function extractConcept(feature: string): string {
+  return feature.replace(/^.*?＝/, '');
+}
+
+async function embedKeywords(keywords: string[]): Promise<number[][]> {
+  return Promise.all(
+    keywords.map(async (kw) => {
+      const out = await extractor('query: ' + kw, { pooling: 'mean', normalize: true });
+      return Array.from(out.data as Float32Array);
+    }),
+  );
+}
+
+function saveCheckpoint(existingEntries: Entry[], newEntries: Entry[], label: string): void {
+  writeFileSync('public/data.json', JSON.stringify([...existingEntries, ...newEntries]));
+  console.log(`  [checkpoint] ${label}`);
+}
+
 const newEntries: Entry[] = [];
 let updatedCount = 0;
 for (const entry of existingEntries) {
@@ -62,7 +82,7 @@ for (const entry of existingEntries) {
   const needsKwEmbed = !entry.keyword_embeddings.length;
   if (!needsKeywords && !needsKwEmbed) continue;
 
-  const concept = entry.feature.replace(/^.*?＝/, '');
+  const concept = extractConcept(entry.feature);
   console.log(`[update] ${entry.title} / ${concept}`);
 
   if (needsKeywords) {
@@ -71,23 +91,17 @@ for (const entry of existingEntries) {
   }
 
   if (needsKwEmbed) {
-    const keyword_embeddings: number[][] = [];
-    for (const kw of entry.keywords) {
-      const out = await extractor('query: ' + kw, { pooling: 'mean', normalize: true });
-      keyword_embeddings.push(Array.from(out.data as Float32Array));
-    }
-    entry.keyword_embeddings = keyword_embeddings;
+    entry.keyword_embeddings = await embedKeywords(entry.keywords);
   }
 
   updatedCount++;
-  if (updatedCount % 100 === 0) {
-    writeFileSync('public/data.json', JSON.stringify([...existingEntries, ...newEntries]));
-    console.log(`  [checkpoint] saved ${updatedCount} updates`);
+  if (updatedCount % CHECKPOINT_INTERVAL === 0) {
+    saveCheckpoint(existingEntries, newEntries, `saved ${updatedCount} updates`);
   }
 }
 
 for (const raw of newRawEntries) {
-  const concept = raw.feature.replace(/^.*?＝/, '');
+  const concept = extractConcept(raw.feature);
   console.log(`[new] ${raw.title} / ${concept}`);
 
   const [out, keywords] = await Promise.all([
@@ -96,12 +110,7 @@ for (const raw of newRawEntries) {
   ]);
   console.log(`  keywords: ${keywords.join(', ')}`);
 
-  const keyword_embeddings = await Promise.all(
-    keywords.map(async (kw) => {
-      const out = await extractor('query: ' + kw, { pooling: 'mean', normalize: true });
-      return Array.from(out.data as Float32Array);
-    }),
-  );
+  const keyword_embeddings = await embedKeywords(keywords);
 
   newEntries.push({
     ...raw,
@@ -110,9 +119,8 @@ for (const raw of newRawEntries) {
     keyword_embeddings,
   });
 
-  if (newEntries.length % 100 === 0) {
-    writeFileSync('public/data.json', JSON.stringify([...existingEntries, ...newEntries]));
-    console.log(`  [checkpoint] saved ${newEntries.length} new entries`);
+  if (newEntries.length % CHECKPOINT_INTERVAL === 0) {
+    saveCheckpoint(existingEntries, newEntries, `saved ${newEntries.length} new entries`);
   }
 }
 
