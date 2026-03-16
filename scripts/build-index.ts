@@ -17,7 +17,6 @@ interface Entry {
 
 type RawEntry = { title: string; feature: string; url: string };
 
-
 const rawEntries = [
   ...(JSON.parse(readFileSync('data/eureka.json', 'utf-8')) as RawEntry[]).map((e) => ({
     ...e,
@@ -31,7 +30,9 @@ const rawEntries = [
 
 let existingEntries: Entry[] = [];
 if (existsSync('public/data.json')) {
-  existingEntries = (JSON.parse(readFileSync('public/data.json', 'utf-8')) as Omit<Entry, 'keywords'>[]).map((e) => ({
+  existingEntries = (
+    JSON.parse(readFileSync('public/data.json', 'utf-8')) as Omit<Entry, 'keywords'>[]
+  ).map((e) => ({
     ...e,
     keywords: (e as Entry).keywords ?? [],
   }));
