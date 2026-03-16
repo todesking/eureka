@@ -55,6 +55,8 @@ const extractor = await pipeline('feature-extraction', 'Xenova/multilingual-e5-s
   dtype: 'fp32',
 });
 
+const newEntries: Entry[] = [];
+let updatedCount = 0;
 for (const entry of existingEntries) {
   const needsKeywords = !entry.keywords.length;
   const needsKwEmbed = !entry.keyword_embeddings.length;
@@ -69,16 +71,21 @@ for (const entry of existingEntries) {
   }
 
   if (needsKwEmbed) {
-    entry.keyword_embeddings = await Promise.all(
-      entry.keywords.map(async (kw) => {
-        const out = await extractor('query: ' + kw, { pooling: 'mean', normalize: true });
-        return Array.from(out.data as Float32Array);
-      }),
-    );
+    const keyword_embeddings: number[][] = [];
+    for (const kw of entry.keywords) {
+      const out = await extractor('query: ' + kw, { pooling: 'mean', normalize: true });
+      keyword_embeddings.push(Array.from(out.data as Float32Array));
+    }
+    entry.keyword_embeddings = keyword_embeddings;
+  }
+
+  updatedCount++;
+  if (updatedCount % 100 === 0) {
+    writeFileSync('public/data.json', JSON.stringify([...existingEntries, ...newEntries]));
+    console.log(`  [checkpoint] saved ${updatedCount} updates`);
   }
 }
 
-const newEntries: Entry[] = [];
 for (const raw of newRawEntries) {
   const concept = raw.feature.replace(/^.*?＝/, '');
   console.log(`[new] ${raw.title} / ${concept}`);
@@ -102,6 +109,11 @@ for (const raw of newRawEntries) {
     embedding: Array.from(out.data as Float32Array),
     keyword_embeddings,
   });
+
+  if (newEntries.length % 100 === 0) {
+    writeFileSync('public/data.json', JSON.stringify([...existingEntries, ...newEntries]));
+    console.log(`  [checkpoint] saved ${newEntries.length} new entries`);
+  }
 }
 
 writeFileSync('public/data.json', JSON.stringify([...existingEntries, ...newEntries]));
