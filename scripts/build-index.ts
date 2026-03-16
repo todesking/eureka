@@ -13,6 +13,7 @@ interface Entry {
   source: Source;
   keywords: string[];
   embedding: number[];
+  keyword_embeddings: number[][];
 }
 
 type RawEntry = { title: string; feature: string; url: string };
@@ -30,12 +31,13 @@ const rawEntries = [
 
 let existingEntries: Entry[] = [];
 if (existsSync('public/data.json')) {
-  existingEntries = (
-    JSON.parse(readFileSync('public/data.json', 'utf-8')) as Omit<Entry, 'keywords'>[]
-  ).map((e) => ({
-    ...e,
-    keywords: (e as Entry).keywords ?? [],
-  }));
+  existingEntries = (JSON.parse(readFileSync('public/data.json', 'utf-8')) as Partial<Entry>[]).map(
+    (e) => ({
+      ...e,
+      keywords: e.keywords ?? [],
+      keyword_embeddings: e.keyword_embeddings ?? [],
+    }),
+  ) as Entry[];
 }
 const existingUrls = new Set(existingEntries.map((e) => e.url));
 const newRawEntries = rawEntries.filter((e) => !existingUrls.has(e.url));
@@ -53,17 +55,53 @@ const extractor = await pipeline('feature-extraction', 'Xenova/multilingual-e5-s
   dtype: 'fp32',
 });
 
+for (const entry of existingEntries) {
+  const needsKeywords = !entry.keywords.length;
+  const needsKwEmbed = !entry.keyword_embeddings.length;
+  if (!needsKeywords && !needsKwEmbed) continue;
+
+  const concept = entry.feature.replace(/^.*?＝/, '');
+  console.log(`[update] ${entry.title} / ${concept}`);
+
+  if (needsKeywords) {
+    entry.keywords = await extractKeywords(concept, apiKey);
+    console.log(`  keywords: ${entry.keywords.join(', ')}`);
+  }
+
+  if (needsKwEmbed) {
+    entry.keyword_embeddings = await Promise.all(
+      entry.keywords.map(async (kw) => {
+        const out = await extractor('query: ' + kw, { pooling: 'mean', normalize: true });
+        return Array.from(out.data as Float32Array);
+      }),
+    );
+  }
+}
+
 const newEntries: Entry[] = [];
-for (let i = 0; i < newRawEntries.length; i++) {
-  const raw = newRawEntries[i];
-  if (i % 100 === 0) console.log(`  ${i}/${newRawEntries.length}`);
+for (const raw of newRawEntries) {
   const concept = raw.feature.replace(/^.*?＝/, '');
-  const text = 'query: ' + concept;
+  console.log(`[new] ${raw.title} / ${concept}`);
+
   const [out, keywords] = await Promise.all([
-    extractor(text, { pooling: 'mean', normalize: true }),
+    extractor('query: ' + concept, { pooling: 'mean', normalize: true }),
     extractKeywords(concept, apiKey),
   ]);
-  newEntries.push({ ...raw, keywords, embedding: Array.from(out.data as Float32Array) });
+  console.log(`  keywords: ${keywords.join(', ')}`);
+
+  const keyword_embeddings = await Promise.all(
+    keywords.map(async (kw) => {
+      const out = await extractor('query: ' + kw, { pooling: 'mean', normalize: true });
+      return Array.from(out.data as Float32Array);
+    }),
+  );
+
+  newEntries.push({
+    ...raw,
+    keywords,
+    embedding: Array.from(out.data as Float32Array),
+    keyword_embeddings,
+  });
 }
 
 writeFileSync('public/data.json', JSON.stringify([...existingEntries, ...newEntries]));
