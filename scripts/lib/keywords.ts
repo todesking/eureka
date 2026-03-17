@@ -31,56 +31,75 @@ JSONの形式:
 `;
 
 const MODEL = 'arcee-ai/trinity-large-preview:free';
+const TIMEOUT_MS = 30_000;
+const MAX_RETRIES = 3;
 
 export async function extractKeywords(
   concept: string,
   apiKey: string,
   options?: { showReasoning?: boolean },
 ): Promise<string[]> {
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: MODEL,
-      reasoning: { effort: 'high' },
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
-          name: 'keywords',
-          strict: true,
-          schema: {
-            type: 'object',
-            properties: {
-              reasoning_steps: {
-                type: 'array',
-                items: { type: 'string' },
-              },
-              keywords: {
-                type: 'array',
-                items: { type: 'string' },
-              },
+  const body = JSON.stringify({
+    model: MODEL,
+    reasoning: { effort: 'high' },
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: 'keywords',
+        strict: true,
+        schema: {
+          type: 'object',
+          properties: {
+            reasoning_steps: {
+              type: 'array',
+              items: { type: 'string' },
             },
-            required: ['keywords'],
-            additionalProperties: false,
+            keywords: {
+              type: 'array',
+              items: { type: 'string' },
+            },
           },
+          required: ['keywords'],
+          additionalProperties: false,
         },
       },
-      messages: [
-        {
-          role: 'user',
-          content: PROMPT.replace('{CONCEPT}', concept),
-        },
-      ],
-    }),
+    },
+    messages: [
+      {
+        role: 'user',
+        content: PROMPT.replace('{CONCEPT}', concept),
+      },
+    ],
   });
-  const json = (await res.json()) as Response;
-  const message = json.choices[0].message;
-  const parsed = JSON.parse(message.content.trim()) as {
-    reasoning_steps: string[];
-    keywords: string[];
-  };
-  if (options?.showReasoning && parsed.reasoning_steps) {
-    process.stderr.write(parsed.reasoning_steps.join('\n') + '\n');
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body,
+        signal: controller.signal,
+      });
+      const json = (await res.json()) as Response;
+      clearTimeout(timer);
+      const message = json.choices[0].message;
+      const parsed = JSON.parse(message.content.trim()) as {
+        reasoning_steps: string[];
+        keywords: string[];
+      };
+      if (options?.showReasoning && parsed.reasoning_steps) {
+        process.stderr.write(parsed.reasoning_steps.join('\n') + '\n');
+      }
+      return parsed.keywords;
+    } catch (err) {
+      clearTimeout(timer);
+      if (attempt === MAX_RETRIES) throw err;
+      console.error(`  [retry] attempt ${attempt} failed: ${err}`);
+    }
   }
-  return parsed.keywords;
+
+  // unreachable
+  throw new Error('unreachable');
 }
