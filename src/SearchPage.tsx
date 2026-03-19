@@ -8,8 +8,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
 } from '@/components/ui/table';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -47,14 +45,6 @@ function FitText({ children }: { children: string }) {
 function ResultsTable({ results, debug }: { results: SearchResult[]; debug: boolean }) {
   return (
     <Table className="w-full table-fixed">
-      <TableHeader>
-        <TableRow className="border-zinc-200 hover:bg-transparent">
-          <TableHead className="text-zinc-500">特集</TableHead>
-          {debug && <TableHead className="text-zinc-500">キーワード top3</TableHead>}
-          {debug && <TableHead className="text-right text-zinc-500">特集類似度</TableHead>}
-          {debug && <TableHead className="text-right text-zinc-500">スコア</TableHead>}
-        </TableRow>
-      </TableHeader>
       <TableBody>
         {results.map((entry, i) => (
           <TableRow key={i} className="border-zinc-200 hover:bg-zinc-50">
@@ -136,8 +126,15 @@ export default function SearchPage() {
       layoutId="search-area"
       className={!showResults ? 'w-full max-w-xl px-6' : undefined}
     >
-      <h1 className="mb-6 text-2xl font-bold tracking-tight">
-        <a href="/" className="text-[rgb(0,64,134)] hover:opacity-80">ユリイカ・現代思想 特集検索</a>
+      <h1 className="mb-6">
+        <a href="/" className="group inline-block hover:opacity-80">
+          <span className="font-mincho block text-2xl font-bold tracking-wider text-[rgb(0,64,134)]">
+            ユリイカ・現代思想
+          </span>
+          <span className="block text-xs font-normal tracking-[0.3em] text-zinc-400">
+            特集検索
+          </span>
+        </a>
       </h1>
       <form
         onSubmit={(e) => {
