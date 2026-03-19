@@ -31,7 +31,7 @@ function FitText({ children }: { children: string }) {
   const prefix = ['総特集＝', '特集＝'].find((p) => children.startsWith(p));
   const hasPrefix = prefix !== undefined;
   return (
-    <span ref={ref} className="font-mincho block font-bold whitespace-nowrap">
+    <span ref={ref} className="font-mincho block font-bold whitespace-nowrap text-zinc-900">
       {hasPrefix ? (
         <>
           <span className="inline-block w-[4em] text-right text-[0.4em]">{prefix}</span>
@@ -48,26 +48,26 @@ function ResultsTable({ results, debug }: { results: SearchResult[]; debug: bool
   return (
     <Table className="w-full table-fixed">
       <TableHeader>
-        <TableRow className="border-zinc-800 hover:bg-transparent">
-          <TableHead className="text-zinc-400">特集</TableHead>
-          {debug && <TableHead className="text-zinc-400">キーワード top3</TableHead>}
-          {debug && <TableHead className="text-right text-zinc-400">特集類似度</TableHead>}
-          {debug && <TableHead className="text-right text-zinc-400">スコア</TableHead>}
+        <TableRow className="border-zinc-200 hover:bg-transparent">
+          <TableHead className="text-zinc-500">特集</TableHead>
+          {debug && <TableHead className="text-zinc-500">キーワード top3</TableHead>}
+          {debug && <TableHead className="text-right text-zinc-500">特集類似度</TableHead>}
+          {debug && <TableHead className="text-right text-zinc-500">スコア</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
         {results.map((entry, i) => (
-          <TableRow key={i} className="border-zinc-800 hover:bg-zinc-900/50">
+          <TableRow key={i} className="border-zinc-200 hover:bg-zinc-50">
             <TableCell>
               <a href={entry.url} target="_blank" rel="noreferrer" className="group block">
-                <div className="text-sm text-zinc-500 group-hover:text-zinc-400">{entry.title}</div>
+                <div className="text-sm text-zinc-400 group-hover:text-zinc-600">{entry.title}</div>
                 <div className="w-full overflow-hidden">
                   <FitText>{entry.feature}</FitText>
                 </div>
               </a>
             </TableCell>
             {debug && (
-              <TableCell className="text-sm text-zinc-400">
+              <TableCell className="text-sm text-zinc-500">
                 {entry.topKeywords?.map((kw) => (
                   <div key={kw.keyword} className="font-mono">
                     <span className="text-zinc-500">{kw.score.toFixed(3)}</span> {kw.keyword}
@@ -76,12 +76,12 @@ function ResultsTable({ results, debug }: { results: SearchResult[]; debug: bool
               </TableCell>
             )}
             {debug && (
-              <TableCell className="text-right font-mono text-sm text-zinc-400">
+              <TableCell className="text-right font-mono text-sm text-zinc-500">
                 {entry.titleScore !== undefined ? entry.titleScore.toFixed(3) : ''}
               </TableCell>
             )}
             {debug && (
-              <TableCell className="text-right font-mono text-sm text-zinc-400">
+              <TableCell className="text-right font-mono text-sm text-zinc-500">
                 {entry.score !== undefined ? entry.score.toFixed(3) : ''}
               </TableCell>
             )}
@@ -136,7 +136,7 @@ export default function SearchPage() {
       layoutId="search-area"
       className={!showResults ? 'w-full max-w-xl px-6' : undefined}
     >
-      <h1 className="mb-6 text-2xl font-bold tracking-tight">ユリイカ・現代思想 特集検索</h1>
+      <h1 className="mb-6 text-2xl font-bold tracking-tight text-[rgb(0,64,134)]">ユリイカ・現代思想 特集検索</h1>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -164,7 +164,7 @@ export default function SearchPage() {
           ref={inputRef}
           placeholder="特集タイトルで検索..."
           className={cn(
-            'border-zinc-700 bg-zinc-900 placeholder:text-zinc-500',
+            'border-zinc-300 bg-white placeholder:text-zinc-400',
             showResults && 'mb-6',
           )}
         />
@@ -175,14 +175,14 @@ export default function SearchPage() {
 
   if (!showResults) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-50">
+      <div className="flex min-h-screen items-center justify-center bg-white text-zinc-900">
         {inputArea}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-50">
+    <div className="min-h-screen bg-white text-zinc-900">
       <div className="mx-auto max-w-5xl px-6 py-10">
         {inputArea}
 
@@ -193,9 +193,9 @@ export default function SearchPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            {isLoading && <p className="animate-pulse text-zinc-400">読み込み中...</p>}
+            {isLoading && <p className="animate-pulse text-zinc-500">読み込み中...</p>}
 
-            {!isLoading && results.length === 0 && <p className="text-zinc-400">該当なし</p>}
+            {!isLoading && results.length === 0 && <p className="text-zinc-500">該当なし</p>}
 
             {!isLoading && results.length > 0 && (
               <ResultsTable results={debug ? results : results.slice(0, 10)} debug={debug} />
@@ -203,15 +203,15 @@ export default function SearchPage() {
 
             {!isLoading && (
               <div className="mt-3 flex items-center gap-4">
-                <p className="text-sm text-zinc-400">
+                <p className="text-sm text-zinc-500">
                   上位 {debug ? results.length : Math.min(results.length, 10)} 件
                 </p>
-                <label className="flex cursor-pointer items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-500">
+                <label className="flex cursor-pointer items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-500">
                   <input
                     type="checkbox"
                     checked={debug}
                     onChange={(e) => setDebug(e.target.checked)}
-                    className="accent-zinc-500"
+                    className="accent-[rgb(0,64,134)]"
                   />
                   debug
                 </label>
