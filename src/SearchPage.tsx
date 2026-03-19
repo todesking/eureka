@@ -4,15 +4,19 @@ import { useState, useEffect, useRef } from 'react';
 import fitty from 'fitty';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableRow,
-} from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useSemanticSearch, type SearchResult } from './useSemanticSearch';
+
+const PREFIXES = ['総特集＝', '特集＝'] as const;
+
+function extractPrefix(feature: string) {
+  const prefix = PREFIXES.find((p) => feature.startsWith(p));
+  return prefix
+    ? { label: prefix.slice(0, -1), title: feature.slice(prefix.length) }
+    : { label: null, title: feature };
+}
 
 function FitText({ children }: { children: string }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -26,18 +30,9 @@ function FitText({ children }: { children: string }) {
       window.removeEventListener('resize', handleResize);
     };
   }, [children]);
-  const prefix = ['総特集＝', '特集＝'].find((p) => children.startsWith(p));
-  const hasPrefix = prefix !== undefined;
   return (
     <span ref={ref} className="font-mincho block font-bold whitespace-nowrap text-zinc-900">
-      {hasPrefix ? (
-        <>
-          <span className="inline-block w-[4em] text-right text-[0.4em]">{prefix}</span>
-          {children.slice(prefix!.length)}
-        </>
-      ) : (
-        children
-      )}
+      {children}
     </span>
   );
 }
@@ -46,37 +41,43 @@ function ResultsTable({ results, debug }: { results: SearchResult[]; debug: bool
   return (
     <Table className="w-full table-fixed">
       <TableBody>
-        {results.map((entry, i) => (
-          <TableRow key={i} className="border-zinc-200 hover:bg-zinc-50">
-            <TableCell>
-              <a href={entry.url} target="_blank" rel="noreferrer" className="group block">
-                <div className="text-sm text-zinc-400 group-hover:text-zinc-600">{entry.title}</div>
-                <div className="w-full overflow-hidden">
-                  <FitText>{entry.feature}</FitText>
-                </div>
-              </a>
-            </TableCell>
-            {debug && (
-              <TableCell className="text-sm text-zinc-500">
-                {entry.topKeywords?.map((kw) => (
-                  <div key={kw.keyword} className="font-mono">
-                    <span className="text-zinc-500">{kw.score.toFixed(3)}</span> {kw.keyword}
+        {results.map((entry, i) => {
+          const { label, title: featureTitle } = extractPrefix(entry.feature);
+          return (
+            <TableRow key={i} className="border-0 hover:bg-zinc-50">
+              <TableCell>
+                <a href={entry.url} target="_blank" rel="noreferrer" className="group block">
+                  <div className="text-sm text-zinc-400 group-hover:text-zinc-600">
+                    {entry.title}
+                    {label && <span className="font-mincho ml-2 font-bold">{label}</span>}
                   </div>
-                ))}
+                  <div className="-mt-1 w-full overflow-hidden">
+                    <FitText>{featureTitle}</FitText>
+                  </div>
+                </a>
               </TableCell>
-            )}
-            {debug && (
-              <TableCell className="text-right font-mono text-sm text-zinc-500">
-                {entry.titleScore !== undefined ? entry.titleScore.toFixed(3) : ''}
-              </TableCell>
-            )}
-            {debug && (
-              <TableCell className="text-right font-mono text-sm text-zinc-500">
-                {entry.score !== undefined ? entry.score.toFixed(3) : ''}
-              </TableCell>
-            )}
-          </TableRow>
-        ))}
+              {debug && (
+                <TableCell className="text-sm text-zinc-500">
+                  {entry.topKeywords?.map((kw) => (
+                    <div key={kw.keyword} className="font-mono">
+                      <span className="text-zinc-500">{kw.score.toFixed(3)}</span> {kw.keyword}
+                    </div>
+                  ))}
+                </TableCell>
+              )}
+              {debug && (
+                <TableCell className="text-right font-mono text-sm text-zinc-500">
+                  {entry.titleScore !== undefined ? entry.titleScore.toFixed(3) : ''}
+                </TableCell>
+              )}
+              {debug && (
+                <TableCell className="text-right font-mono text-sm text-zinc-500">
+                  {entry.score !== undefined ? entry.score.toFixed(3) : ''}
+                </TableCell>
+              )}
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );
@@ -126,14 +127,12 @@ export default function SearchPage() {
       layoutId="search-area"
       className={!showResults ? 'w-full max-w-xl px-6' : undefined}
     >
-      <h1 className="mb-6">
+      <h1 className="mb-3">
         <a href="/" className="group inline-block hover:opacity-80">
           <span className="font-mincho block text-2xl font-bold tracking-wider text-[rgb(0,64,134)]">
             ユリイカ・現代思想
           </span>
-          <span className="block text-xs font-normal tracking-[0.3em] text-zinc-400">
-            特集検索
-          </span>
+          <span className="block text-xs font-normal tracking-[0.3em] text-zinc-400">特集検索</span>
         </a>
       </h1>
       <form
