@@ -1,4 +1,4 @@
-import tp from 'node:timers/promises'
+import tp from 'node:timers/promises';
 
 type Response = {
   choices: {

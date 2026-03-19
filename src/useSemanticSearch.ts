@@ -2,7 +2,12 @@ import { useState, useEffect } from 'react';
 import { pipeline, type FeatureExtractionPipelineType } from '@huggingface/transformers';
 import type { Entry } from './useData';
 
-export type SearchResult = Entry & { score?: number; queryScore?: number; passageScore?: number };
+export type SearchResult = Entry & {
+  score?: number;
+  matchedLabel?: string;
+  titleScore?: number;
+  topKeywords?: { keyword: string; score: number }[];
+};
 
 let extractorPromise: Promise<FeatureExtractionPipelineType> | null = null;
 
@@ -44,25 +49,38 @@ export function useSemanticSearch(
 
     void (async () => {
       const extractor = await getExtractor();
-      const [outQuery, outPassage] = await Promise.all([
-        extractor(`query: ${q}`, { pooling: 'mean', normalize: true }),
-        extractor(`passage: ${q}`, { pooling: 'mean', normalize: true }),
-      ]);
+      const outQuery = await extractor(`query: ${q}`, { pooling: 'mean', normalize: true });
       if (cancelled) return;
       const queryVec = Array.from(outQuery.data as Float32Array);
-      const passageVec = Array.from(outPassage.data as Float32Array);
       const scored = entries.map((e) => {
-        const queryScore = cosineSimilarity(queryVec, e.embedding);
-        const passageScore = cosineSimilarity(passageVec, e.embedding);
-        return { entry: e, score: Math.max(queryScore, passageScore), queryScore, passageScore };
+        const embScore = cosineSimilarity(queryVec, e.embedding);
+        const kwScores = (e.keyword_embeddings ?? []).map((kw) => cosineSimilarity(queryVec, kw));
+        const top3 =
+          kwScores.length > 0
+            ? kwScores
+                .slice()
+                .sort((a, b) => b - a)
+                .slice(0, 3)
+            : null;
+        const top3KwAvg = top3 ? top3.length / top3.reduce((s, v) => s + 1 / v, 0) : embScore;
+        const score = Math.max(top3KwAvg, embScore);
+        const maxKwScore = kwScores.length > 0 ? Math.max(...kwScores) : embScore;
+        const maxKwIndex = kwScores.indexOf(maxKwScore);
+        const matchedLabel = e.keywords?.[maxKwIndex] ?? `kw[${maxKwIndex}]`;
+        const topKeywords = kwScores
+          .map((s, i) => ({ keyword: e.keywords?.[i] ?? `kw[${i}]`, score: s }))
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 3);
+        return { entry: e, score, matchedLabel, titleScore: embScore, topKeywords };
       });
       scored.sort((a, b) => b.score - a.score);
       setResults(
         scored.slice(0, 50).map((s) => ({
           ...s.entry,
           score: s.score,
-          queryScore: s.queryScore,
-          passageScore: s.passageScore,
+          matchedLabel: s.matchedLabel,
+          titleScore: s.titleScore,
+          topKeywords: s.topKeywords,
         })),
       );
       setSearching(false);

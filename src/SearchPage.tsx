@@ -25,8 +25,8 @@ function ResultsTable({ results }: { results: SearchResult[] }) {
           <TableHead className="text-zinc-400">特集タイトル</TableHead>
           <TableHead className="text-zinc-400">雑誌名</TableHead>
           <TableHead className="text-zinc-400">リンク</TableHead>
-          <TableHead className="text-right text-zinc-400">queryスコア</TableHead>
-          <TableHead className="text-right text-zinc-400">passageスコア</TableHead>
+          <TableHead className="text-zinc-400">キーワード top3</TableHead>
+          <TableHead className="text-right text-zinc-400">特集類似度</TableHead>
           <TableHead className="text-right text-zinc-400">スコア</TableHead>
         </TableRow>
       </TableHeader>
@@ -50,11 +50,15 @@ function ResultsTable({ results }: { results: SearchResult[] }) {
                 詳細
               </a>
             </TableCell>
-            <TableCell className="text-right font-mono text-sm text-zinc-400">
-              {entry.queryScore !== undefined ? entry.queryScore.toFixed(3) : ''}
+            <TableCell className="text-sm text-zinc-400">
+              {entry.topKeywords?.map((kw) => (
+                <div key={kw.keyword} className="font-mono">
+                  <span className="text-zinc-500">{kw.score.toFixed(3)}</span> {kw.keyword}
+                </div>
+              ))}
             </TableCell>
             <TableCell className="text-right font-mono text-sm text-zinc-400">
-              {entry.passageScore !== undefined ? entry.passageScore.toFixed(3) : ''}
+              {entry.titleScore !== undefined ? entry.titleScore.toFixed(3) : ''}
             </TableCell>
             <TableCell className="text-right font-mono text-sm text-zinc-400">
               {entry.score !== undefined ? entry.score.toFixed(3) : ''}
