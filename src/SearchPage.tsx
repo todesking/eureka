@@ -190,11 +190,13 @@ export default function SearchPage() {
 
             {!isLoading && results.length === 0 && <p className="text-zinc-400">該当なし</p>}
 
-            {!isLoading && results.length > 0 && <ResultsTable results={results} debug={debug} />}
+            {!isLoading && results.length > 0 && (
+              <ResultsTable results={debug ? results : results.slice(0, 10)} debug={debug} />
+            )}
 
             {!isLoading && (
               <div className="mt-3 flex items-center gap-4">
-                <p className="text-sm text-zinc-400">上位 {results.length} 件</p>
+                <p className="text-sm text-zinc-400">上位 {debug ? results.length : Math.min(results.length, 10)} 件</p>
                 <label className="flex cursor-pointer items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-500">
                   <input
                     type="checkbox"
