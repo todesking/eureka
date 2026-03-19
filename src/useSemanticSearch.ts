@@ -37,7 +37,8 @@ export function useSemanticSearch(
 
   useEffect(() => {
     if (q === '') {
-      setResults(entries);
+      const getId = (url: string) => parseInt(new URL(url).searchParams.get('id') ?? '0', 10);
+      setResults([...entries].sort((a, b) => getId(b.url) - getId(a.url)));
       setSearching(false);
       return;
     }
