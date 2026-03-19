@@ -13,15 +13,23 @@ export interface Entry {
 export function useData() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     void fetch('/data.json')
-      .then((r) => r.json() as Promise<Entry[]>)
+      .then((r) => {
+        if (!r.ok) throw new Error(`Failed to fetch data: ${r.status}`);
+        return r.json() as Promise<Entry[]>;
+      })
       .then((data) => {
         setEntries(data);
+        setLoading(false);
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : 'Failed to load data');
         setLoading(false);
       });
   }, []);
 
-  return { entries, loading };
+  return { entries, loading, error };
 }

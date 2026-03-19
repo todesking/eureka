@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { pipeline, type FeatureExtractionPipelineType } from '@huggingface/transformers';
 import type { Entry } from './useData';
 
+const SEARCH_LIMIT = 50;
+
 export type SearchResult = Entry & {
   score?: number;
   matchedLabel?: string;
@@ -31,60 +33,70 @@ export function useSemanticSearch(
   q: string,
   entries: Entry[],
   dataLoading: boolean,
-): { results: SearchResult[]; searching: boolean } {
+): { results: SearchResult[]; searching: boolean; error: string | null } {
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (q === '') {
       const getId = (url: string) => parseInt(new URL(url).searchParams.get('id') ?? '0', 10);
       setResults([...entries].sort((a, b) => getId(b.url) - getId(a.url)));
       setSearching(false);
+      setError(null);
       return;
     }
 
     if (dataLoading) return;
 
     setSearching(true);
+    setError(null);
     let cancelled = false;
 
     void (async () => {
-      const extractor = await getExtractor();
-      const outQuery = await extractor(`query: ${q}`, { pooling: 'mean', normalize: true });
-      if (cancelled) return;
-      const queryVec = Array.from(outQuery.data as Float32Array);
-      const scored = entries.map((e) => {
-        const embScore = cosineSimilarity(queryVec, e.embedding);
-        const kwScores = (e.keyword_embeddings ?? []).map((kw) => cosineSimilarity(queryVec, kw));
-        const top3 =
-          kwScores.length > 0
-            ? kwScores
-                .slice()
-                .sort((a, b) => b - a)
-                .slice(0, 3)
-            : [];
-        const geoValues = [...top3, embScore];
-        const score = Math.exp(geoValues.reduce((s, v) => s + Math.log(v), 0) / geoValues.length);
-        const maxKwScore = kwScores.length > 0 ? Math.max(...kwScores) : embScore;
-        const maxKwIndex = kwScores.indexOf(maxKwScore);
-        const matchedLabel = e.keywords?.[maxKwIndex] ?? `kw[${maxKwIndex}]`;
-        const topKeywords = kwScores
-          .map((s, i) => ({ keyword: e.keywords?.[i] ?? `kw[${i}]`, score: s }))
-          .sort((a, b) => b.score - a.score)
-          .slice(0, 3);
-        return { entry: e, score, matchedLabel, titleScore: embScore, topKeywords };
-      });
-      scored.sort((a, b) => b.score - a.score);
-      setResults(
-        scored.slice(0, 50).map((s) => ({
-          ...s.entry,
-          score: s.score,
-          matchedLabel: s.matchedLabel,
-          titleScore: s.titleScore,
-          topKeywords: s.topKeywords,
-        })),
-      );
-      setSearching(false);
+      try {
+        const extractor = await getExtractor();
+        const outQuery = await extractor(`query: ${q}`, { pooling: 'mean', normalize: true });
+        if (cancelled) return;
+        const queryVec = Array.from(outQuery.data as Float32Array);
+        const scored = entries.map((e) => {
+          const embScore = cosineSimilarity(queryVec, e.embedding);
+          const kwScores = (e.keyword_embeddings ?? []).map((kw) => cosineSimilarity(queryVec, kw));
+          const top3 =
+            kwScores.length > 0
+              ? kwScores
+                  .slice()
+                  .sort((a, b) => b - a)
+                  .slice(0, 3)
+              : [];
+          const geoValues = [...top3, embScore];
+          const score = Math.exp(geoValues.reduce((s, v) => s + Math.log(v), 0) / geoValues.length);
+          const maxKwScore = kwScores.length > 0 ? Math.max(...kwScores) : embScore;
+          const maxKwIndex = kwScores.indexOf(maxKwScore);
+          const matchedLabel = e.keywords?.[maxKwIndex] ?? `kw[${maxKwIndex}]`;
+          const topKeywords = kwScores
+            .map((s, i) => ({ keyword: e.keywords?.[i] ?? `kw[${i}]`, score: s }))
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 3);
+          return { entry: e, score, matchedLabel, titleScore: embScore, topKeywords };
+        });
+        scored.sort((a, b) => b.score - a.score);
+        setResults(
+          scored.slice(0, SEARCH_LIMIT).map((s) => ({
+            ...s.entry,
+            score: s.score,
+            matchedLabel: s.matchedLabel,
+            titleScore: s.titleScore,
+            topKeywords: s.topKeywords,
+          })),
+        );
+        setSearching(false);
+      } catch (err) {
+        if (cancelled) return;
+        extractorPromise = null;
+        setError(err instanceof Error ? err.message : 'Search model failed to load');
+        setSearching(false);
+      }
     })();
 
     return () => {
@@ -92,5 +104,5 @@ export function useSemanticSearch(
     };
   }, [q, entries, dataLoading]);
 
-  return { results, searching };
+  return { results, searching, error };
 }

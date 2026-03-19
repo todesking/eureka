@@ -43,7 +43,6 @@
     "clsx": "^2.1.1",
     "fitty": "^2.4.2",
     "framer-motion": "^12.36.0",
-    "lucide-react": "^0.577.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.1",

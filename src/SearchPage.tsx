@@ -1,95 +1,20 @@
 import { useSearchParams } from 'react-router-dom';
 import { useData } from './useData';
 import { useState, useEffect, useRef } from 'react';
-import fitty from 'fitty';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { useSemanticSearch, type SearchResult } from './useSemanticSearch';
+import { useSemanticSearch } from './useSemanticSearch';
+import { ResultsTable } from './components/ResultsTable';
 
-const PREFIXES = ['総特集＝', '特集＝'] as const;
-
-function extractPrefix(feature: string) {
-  const prefix = PREFIXES.find((p) => feature.startsWith(p));
-  return prefix
-    ? { label: prefix.slice(0, -1), title: feature.slice(prefix.length) }
-    : { label: null, title: feature };
-}
-
-function FitText({ children }: { children: string }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    if (!ref.current) return;
-    const instance = fitty(ref.current, { minSize: 14, maxSize: 72 });
-    const handleResize = () => instance.fit();
-    window.addEventListener('resize', handleResize);
-    return () => {
-      instance.unsubscribe();
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [children]);
-  return (
-    <span
-      ref={ref}
-      className="font-mincho block pb-[0.2em] [font-feature-settings:'palt'] leading-none font-bold whitespace-nowrap text-zinc-900"
-    >
-      {children}
-    </span>
-  );
-}
-
-function ResultsTable({ results, debug }: { results: SearchResult[]; debug: boolean }) {
-  return (
-    <Table className="w-full table-fixed">
-      <TableBody>
-        {results.map((entry, i) => {
-          const { label, title: featureTitle } = extractPrefix(entry.feature);
-          return (
-            <TableRow key={i} className="border-0 hover:bg-zinc-50">
-              <TableCell className="py-0.5">
-                <a href={entry.url} target="_blank" rel="noreferrer" className="group block">
-                  <div className="text-sm text-zinc-400 group-hover:text-zinc-600">
-                    {entry.title}
-                    {label && <span className="font-mincho ml-2 font-bold">{label}</span>}
-                  </div>
-                  <div className="mt-0.5 w-full overflow-x-hidden">
-                    <FitText>{featureTitle}</FitText>
-                  </div>
-                </a>
-              </TableCell>
-              {debug && (
-                <TableCell className="text-sm text-zinc-500">
-                  {entry.topKeywords?.map((kw) => (
-                    <div key={kw.keyword} className="font-mono">
-                      <span className="text-zinc-500">{kw.score.toFixed(3)}</span> {kw.keyword}
-                    </div>
-                  ))}
-                </TableCell>
-              )}
-              {debug && (
-                <TableCell className="text-right font-mono text-sm text-zinc-500">
-                  {entry.titleScore !== undefined ? entry.titleScore.toFixed(3) : ''}
-                </TableCell>
-              )}
-              {debug && (
-                <TableCell className="text-right font-mono text-sm text-zinc-500">
-                  {entry.score !== undefined ? entry.score.toFixed(3) : ''}
-                </TableCell>
-              )}
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
-  );
-}
+const DEBOUNCE_MS = 800;
+const DISPLAY_LIMIT = 10;
 
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const q = searchParams.get('q') ?? '';
-  const { entries, loading: dataLoading } = useData();
+  const { entries, loading: dataLoading, error: dataError } = useData();
   const [showResults, setShowResults] = useState(q !== '');
   const [debug, setDebug] = useState(false);
   const urlDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -98,7 +23,9 @@ export default function SearchPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const prevQ = useRef(q);
 
-  const { results, searching } = useSemanticSearch(q, entries, dataLoading);
+  const { results, searching, error: searchError } = useSemanticSearch(q, entries, dataLoading);
+
+  const error = dataError ?? searchError;
 
   useEffect(() => {
     if (prevQ.current === '' && q !== '') {
@@ -119,7 +46,7 @@ export default function SearchPage() {
     } else {
       urlDebounceRef.current = setTimeout(() => {
         setSearchParams(value ? { q: value } : {});
-      }, 800);
+      }, DEBOUNCE_MS);
     }
   }
 
@@ -194,21 +121,32 @@ export default function SearchPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            {isLoading && <p className="animate-pulse text-zinc-500">読み込み中...</p>}
+            {error && <p className="text-red-600">{error}</p>}
 
-            {!isLoading && results.length === 0 && <p className="text-zinc-500">該当なし</p>}
+            {!error && isLoading && <p className="animate-pulse text-zinc-500">読み込み中...</p>}
 
-            {!isLoading && results.length > 0 && (
-              <ResultsTable results={debug ? results : results.slice(0, 10)} debug={debug} />
+            {!error && !isLoading && results.length === 0 && (
+              <p className="text-zinc-500">該当なし</p>
             )}
 
-            {!isLoading && (
+            {!error && !isLoading && results.length > 0 && (
+              <ResultsTable
+                results={debug ? results : results.slice(0, DISPLAY_LIMIT)}
+                debug={debug}
+              />
+            )}
+
+            {!error && !isLoading && (
               <div className="mt-3 flex items-center gap-4">
                 <p className="text-sm text-zinc-500">
-                  上位 {debug ? results.length : Math.min(results.length, 10)} 件
+                  上位 {debug ? results.length : Math.min(results.length, DISPLAY_LIMIT)} 件
                 </p>
-                <label className="flex cursor-pointer items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-500">
+                <label
+                  htmlFor="debug-toggle"
+                  className="flex cursor-pointer items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-500"
+                >
                   <input
+                    id="debug-toggle"
                     type="checkbox"
                     checked={debug}
                     onChange={(e) => setDebug(e.target.checked)}

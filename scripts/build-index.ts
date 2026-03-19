@@ -78,6 +78,7 @@ async function main() {
 
   const newEntries: Entry[] = [];
   let updatedCount = 0;
+  let skipped = 0;
   for (const entry of existingEntries) {
     const needsKeywords = !entry.keywords.length;
     const needsKwEmbed = !entry.keyword_embeddings.length;
@@ -86,18 +87,23 @@ async function main() {
     const concept = extractConcept(entry.feature);
     console.log(`[update] ${entry.title} / ${concept}`);
 
-    if (needsKeywords) {
-      entry.keywords = await extractKeywords(concept, apiKey);
-      console.log(`  keywords: ${entry.keywords.join(', ')}`);
-    }
+    try {
+      if (needsKeywords) {
+        entry.keywords = await extractKeywords(concept, apiKey);
+        console.log(`  keywords: ${entry.keywords.join(', ')}`);
+      }
 
-    if (needsKwEmbed) {
-      entry.keyword_embeddings = await embedKeywords(entry.keywords);
-    }
+      if (needsKwEmbed) {
+        entry.keyword_embeddings = await embedKeywords(entry.keywords);
+      }
 
-    updatedCount++;
-    if (updatedCount % CHECKPOINT_INTERVAL === 0) {
-      saveCheckpoint(existingEntries, newEntries, `saved ${updatedCount} updates`);
+      updatedCount++;
+      if (updatedCount % CHECKPOINT_INTERVAL === 0) {
+        saveCheckpoint(existingEntries, newEntries, `saved ${updatedCount} updates`);
+      }
+    } catch (err) {
+      skipped++;
+      console.error(`  [skip] failed to update: ${err instanceof Error ? err.message : err}`);
     }
   }
 
@@ -105,24 +111,33 @@ async function main() {
     const concept = extractConcept(raw.feature);
     console.log(`[new] ${raw.title} / ${concept}`);
 
-    const [out, keywords] = await Promise.all([
-      extractor('query: ' + concept, { pooling: 'mean', normalize: true }),
-      extractKeywords(concept, apiKey),
-    ]);
-    console.log(`  keywords: ${keywords.join(', ')}`);
+    try {
+      const [out, keywords] = await Promise.all([
+        extractor('query: ' + concept, { pooling: 'mean', normalize: true }),
+        extractKeywords(concept, apiKey),
+      ]);
+      console.log(`  keywords: ${keywords.join(', ')}`);
 
-    const keyword_embeddings = await embedKeywords(keywords);
+      const keyword_embeddings = await embedKeywords(keywords);
 
-    newEntries.push({
-      ...raw,
-      keywords,
-      embedding: Array.from(out.data as Float32Array),
-      keyword_embeddings,
-    });
+      newEntries.push({
+        ...raw,
+        keywords,
+        embedding: Array.from(out.data as Float32Array),
+        keyword_embeddings,
+      });
 
-    if (newEntries.length % CHECKPOINT_INTERVAL === 0) {
-      saveCheckpoint(existingEntries, newEntries, `saved ${newEntries.length} new entries`);
+      if (newEntries.length % CHECKPOINT_INTERVAL === 0) {
+        saveCheckpoint(existingEntries, newEntries, `saved ${newEntries.length} new entries`);
+      }
+    } catch (err) {
+      skipped++;
+      console.error(`  [skip] failed to embed: ${err instanceof Error ? err.message : err}`);
     }
+  }
+
+  if (skipped > 0) {
+    console.warn(`Skipped ${skipped} entries due to errors`);
   }
 
   writeFileSync('public/data.json', JSON.stringify([...existingEntries, ...newEntries]));
