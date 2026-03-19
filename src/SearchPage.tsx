@@ -21,7 +21,12 @@ function FitText({ children }: { children: string }) {
   useEffect(() => {
     if (!ref.current) return;
     const instance = fitty(ref.current, { minSize: 14, maxSize: 72 });
-    return () => instance.unsubscribe();
+    const handleResize = () => instance.fit();
+    window.addEventListener('resize', handleResize);
+    return () => {
+      instance.unsubscribe();
+      window.removeEventListener('resize', handleResize);
+    };
   }, [children]);
   const prefix = ['総特集＝', '特集＝'].find((p) => children.startsWith(p));
   const hasPrefix = prefix !== undefined;
@@ -41,7 +46,7 @@ function FitText({ children }: { children: string }) {
 
 function ResultsTable({ results, debug }: { results: SearchResult[]; debug: boolean }) {
   return (
-    <Table>
+    <Table className="w-full table-fixed">
       <TableHeader>
         <TableRow className="border-zinc-800 hover:bg-transparent">
           <TableHead className="text-zinc-400">特集</TableHead>
@@ -56,7 +61,9 @@ function ResultsTable({ results, debug }: { results: SearchResult[]; debug: bool
             <TableCell>
               <a href={entry.url} target="_blank" rel="noreferrer" className="group block">
                 <div className="text-sm text-zinc-500 group-hover:text-zinc-400">{entry.title}</div>
-                <FitText>{entry.feature}</FitText>
+                <div className="w-full overflow-hidden">
+                  <FitText>{entry.feature}</FitText>
+                </div>
               </a>
             </TableCell>
             {debug && (
@@ -196,7 +203,9 @@ export default function SearchPage() {
 
             {!isLoading && (
               <div className="mt-3 flex items-center gap-4">
-                <p className="text-sm text-zinc-400">上位 {debug ? results.length : Math.min(results.length, 10)} 件</p>
+                <p className="text-sm text-zinc-400">
+                  上位 {debug ? results.length : Math.min(results.length, 10)} 件
+                </p>
                 <label className="flex cursor-pointer items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-500">
                   <input
                     type="checkbox"
