@@ -33,7 +33,7 @@ function FitText({ children }: { children: string }) {
   return (
     <span
       ref={ref}
-      className="font-mincho block leading-none font-bold whitespace-nowrap text-zinc-900"
+      className="font-mincho block pb-[0.2em] leading-none font-bold whitespace-nowrap text-zinc-900"
     >
       {children}
     </span>
@@ -48,13 +48,13 @@ function ResultsTable({ results, debug }: { results: SearchResult[]; debug: bool
           const { label, title: featureTitle } = extractPrefix(entry.feature);
           return (
             <TableRow key={i} className="border-0 hover:bg-zinc-50">
-              <TableCell className="py-2">
+              <TableCell className="py-0.5">
                 <a href={entry.url} target="_blank" rel="noreferrer" className="group block">
                   <div className="text-sm text-zinc-400 group-hover:text-zinc-600">
                     {entry.title}
                     {label && <span className="font-mincho ml-2 font-bold">{label}</span>}
                   </div>
-                  <div className="mt-0.5 w-full overflow-hidden">
+                  <div className="mt-0.5 w-full overflow-x-hidden">
                     <FitText>{featureTitle}</FitText>
                   </div>
                 </a>
