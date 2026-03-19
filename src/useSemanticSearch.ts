@@ -75,7 +75,7 @@ export function useSemanticSearch(
       });
       scored.sort((a, b) => b.score - a.score);
       setResults(
-        scored.slice(0, 50).map((s) => ({
+        scored.slice(0, 10).map((s) => ({
           ...s.entry,
           score: s.score,
           matchedLabel: s.matchedLabel,
