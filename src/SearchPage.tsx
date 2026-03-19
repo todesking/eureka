@@ -33,7 +33,7 @@ function FitText({ children }: { children: string }) {
   return (
     <span
       ref={ref}
-      className="font-mincho block pb-[0.2em] leading-none font-bold whitespace-nowrap text-zinc-900"
+      className="font-mincho block pb-[0.2em] [font-feature-settings:'palt'] leading-none font-bold whitespace-nowrap text-zinc-900"
     >
       {children}
     </span>
