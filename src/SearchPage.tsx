@@ -31,7 +31,10 @@ function FitText({ children }: { children: string }) {
     };
   }, [children]);
   return (
-    <span ref={ref} className="font-mincho block font-bold whitespace-nowrap text-zinc-900">
+    <span
+      ref={ref}
+      className="font-mincho block leading-none font-bold whitespace-nowrap text-zinc-900"
+    >
       {children}
     </span>
   );
@@ -45,13 +48,13 @@ function ResultsTable({ results, debug }: { results: SearchResult[]; debug: bool
           const { label, title: featureTitle } = extractPrefix(entry.feature);
           return (
             <TableRow key={i} className="border-0 hover:bg-zinc-50">
-              <TableCell>
+              <TableCell className="py-2">
                 <a href={entry.url} target="_blank" rel="noreferrer" className="group block">
                   <div className="text-sm text-zinc-400 group-hover:text-zinc-600">
                     {entry.title}
                     {label && <span className="font-mincho ml-2 font-bold">{label}</span>}
                   </div>
-                  <div className="-mt-1 w-full overflow-hidden">
+                  <div className="mt-0.5 w-full overflow-hidden">
                     <FitText>{featureTitle}</FitText>
                   </div>
                 </a>
@@ -128,11 +131,11 @@ export default function SearchPage() {
       className={!showResults ? 'w-full max-w-xl px-6' : undefined}
     >
       <h1 className="mb-3">
-        <a href="/" className="group inline-block hover:opacity-80">
-          <span className="font-mincho block text-2xl font-bold tracking-wider text-[rgb(0,64,134)]">
+        <a href="/" className="group inline-flex items-baseline gap-3 hover:opacity-80">
+          <span className="font-mincho text-2xl font-bold tracking-wider text-[rgb(0,64,134)]">
             ユリイカ・現代思想
           </span>
-          <span className="block text-xs font-normal tracking-[0.3em] text-zinc-400">特集検索</span>
+          <span className="text-xs font-normal tracking-[0.3em] text-zinc-400">特集検索</span>
         </a>
       </h1>
       <form
