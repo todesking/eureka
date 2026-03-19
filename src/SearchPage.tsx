@@ -29,7 +29,7 @@ function FitText({ children }: { children: string }) {
     <span ref={ref} className="font-mincho block font-bold whitespace-nowrap">
       {hasPrefix ? (
         <>
-          <span className="text-[0.4em]">{prefix}</span>
+          <span className="inline-block w-[4em] text-right text-[0.4em]">{prefix}</span>
           {children.slice(prefix!.length)}
         </>
       ) : (
