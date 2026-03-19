@@ -123,7 +123,7 @@ export default function SearchPage() {
     }
   }
 
-  const isLoading = dataLoading || searching;
+  const isLoading = dataLoading || searching || (showResults && q === '' && inputValue !== '');
 
   const inputArea = (
     <motion.div
