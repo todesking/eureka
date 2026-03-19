@@ -136,7 +136,9 @@ export default function SearchPage() {
       layoutId="search-area"
       className={!showResults ? 'w-full max-w-xl px-6' : undefined}
     >
-      <h1 className="mb-6 text-2xl font-bold tracking-tight text-[rgb(0,64,134)]">ユリイカ・現代思想 特集検索</h1>
+      <h1 className="mb-6 text-2xl font-bold tracking-tight">
+        <a href="/" className="text-[rgb(0,64,134)] hover:opacity-80">ユリイカ・現代思想 特集検索</a>
+      </h1>
       <form
         onSubmit={(e) => {
           e.preventDefault();
