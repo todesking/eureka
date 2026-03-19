@@ -61,9 +61,9 @@ export function useSemanticSearch(
                 .slice()
                 .sort((a, b) => b - a)
                 .slice(0, 3)
-            : null;
-        const top3KwAvg = top3 ? top3.length / top3.reduce((s, v) => s + 1 / v, 0) : embScore;
-        const score = Math.max(top3KwAvg, embScore);
+            : [];
+        const geoValues = [...top3, embScore];
+        const score = Math.exp(geoValues.reduce((s, v) => s + Math.log(v), 0) / geoValues.length);
         const maxKwScore = kwScores.length > 0 ? Math.max(...kwScores) : embScore;
         const maxKwIndex = kwScores.indexOf(maxKwScore);
         const matchedLabel = e.keywords?.[maxKwIndex] ?? `kw[${maxKwIndex}]`;
