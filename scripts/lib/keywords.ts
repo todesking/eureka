@@ -1,3 +1,5 @@
+import tp from 'node:timers/promises'
+
 type Response = {
   choices: {
     message: {
@@ -32,7 +34,7 @@ JSONの形式:
 
 const MODEL = 'arcee-ai/trinity-large-preview:free';
 const TIMEOUT_MS = 30_000;
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 5;
 
 export async function extractKeywords(
   concept: string,
@@ -96,6 +98,7 @@ export async function extractKeywords(
     } catch (err) {
       clearTimeout(timer);
       if (attempt === MAX_RETRIES) throw err;
+      await tp.setTimeout(1000);
       console.error(`  [retry] attempt ${attempt} failed: ${err}`);
     }
   }
