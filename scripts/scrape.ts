@@ -50,11 +50,12 @@ async function scrape(config: {
   name: string;
   catId: number;
   filter: string;
-  years: [number, number];
+  startYear: number;
   out: string;
 }): Promise<void> {
   let existingBooks: Book[] = [];
-  let startYear = config.years[0];
+  let startYear = config.startYear;
+  const endYear = new Date().getFullYear();
 
   if (existsSync(config.out)) {
     existingBooks = JSON.parse(readFileSync(config.out, 'utf-8')) as Book[];
@@ -72,7 +73,7 @@ async function scrape(config: {
   });
 
   const newBooks: Book[] = [];
-  for (let year = startYear; year <= config.years[1]; year++) {
+  for (let year = startYear; year <= endYear; year++) {
     process.stdout.write(`[${config.name}] Fetching ${year}...`);
     try {
       const html = await fetchYear(year, config.catId);
@@ -92,13 +93,13 @@ await scrape({
   name: 'ユリイカ',
   catId: 10,
   filter: 'ユリイカ',
-  years: [1988, 2026],
+  startYear: 1988,
   out: 'data/eureka.json',
 });
 await scrape({
   name: '現代思想',
   catId: 11,
   filter: '現代思想',
-  years: [1973, 2026],
+  startYear: 1973,
   out: 'data/gendai_shiso.json',
 });

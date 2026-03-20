@@ -1,7 +1,10 @@
 .claude/settings.local.json
 node_modules
 dist
-public/data.json
 .serena
+
+# Generated datasets (scrape/build-index)
+public/data.json
 data
+
 .env

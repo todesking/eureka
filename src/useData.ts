@@ -16,7 +16,8 @@ export function useData() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void fetch('/data.json')
+    const url = new URL('data.json', import.meta.env.BASE_URL).toString();
+    void fetch(url)
       .then((r) => {
         if (!r.ok) throw new Error(`Failed to fetch data: ${r.status}`);
         return r.json() as Promise<Entry[]>;

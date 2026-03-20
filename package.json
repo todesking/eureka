@@ -5,6 +5,7 @@
   "scripts": {
     "scrape": "jiti scripts/scrape.ts",
     "build-index": "jiti scripts/build-index.ts",
+    "data": "npm run scrape && npm run build-index",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",

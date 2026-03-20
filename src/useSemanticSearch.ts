@@ -4,6 +4,7 @@ import type { Entry } from './useData';
 
 const SEARCH_LIMIT = 50;
 const TOP_KEYWORDS_COUNT = 3;
+const EPSILON = 1e-6;
 
 export type SearchResult = Entry & {
   score?: number;
@@ -31,8 +32,10 @@ function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 function scoreEntry(queryVec: number[], e: Entry) {
-  const embScore = cosineSimilarity(queryVec, e.embedding);
-  const kwScores = (e.keyword_embeddings ?? []).map((kw) => cosineSimilarity(queryVec, kw));
+  const embScore = Math.max(cosineSimilarity(queryVec, e.embedding), EPSILON);
+  const kwScores = (e.keyword_embeddings ?? []).map((kw) =>
+    Math.max(cosineSimilarity(queryVec, kw), EPSILON),
+  );
   const topKw =
     kwScores.length > 0
       ? kwScores
