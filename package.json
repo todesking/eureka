@@ -13,7 +13,7 @@
     "format:check": "prettier --check src scripts",
     "check": "tsc --noEmit && eslint && prettier --check src scripts",
     "predeploy": "test -f public/data.json || (echo 'Error: public/data.json not found. Run npm run data first.' && exit 1)",
-    "deploy": "npm run build && gh-pages -d dist -f"
+    "deploy": "npm run build && gh-pages -d dist"
   },
   "devDependencies": {
     "@eslint/css": "^1.0.0",
