@@ -3,6 +3,7 @@ import { pipeline, type FeatureExtractionPipelineType } from '@huggingface/trans
 import type { Entry } from './useData';
 
 const SEARCH_LIMIT = 50;
+const TOP_KEYWORDS_COUNT = 3;
 
 export type SearchResult = Entry & {
   score?: number;
@@ -27,6 +28,28 @@ function cosineSimilarity(a: number[], b: number[]): number {
   let dot = 0;
   for (let i = 0; i < a.length; i++) dot += (a[i] ?? 0) * (b[i] ?? 0);
   return dot; // normalize: true なのでL2正規化済み → 内積 = コサイン類似度
+}
+
+function scoreEntry(queryVec: number[], e: Entry) {
+  const embScore = cosineSimilarity(queryVec, e.embedding);
+  const kwScores = (e.keyword_embeddings ?? []).map((kw) => cosineSimilarity(queryVec, kw));
+  const topKw =
+    kwScores.length > 0
+      ? kwScores
+          .slice()
+          .sort((a, b) => b - a)
+          .slice(0, TOP_KEYWORDS_COUNT)
+      : [];
+  const geoValues = [...topKw, embScore];
+  const score = Math.exp(geoValues.reduce((s, v) => s + Math.log(v), 0) / geoValues.length);
+  const maxKwScore = kwScores.length > 0 ? Math.max(...kwScores) : embScore;
+  const maxKwIndex = kwScores.indexOf(maxKwScore);
+  const matchedLabel = e.keywords?.[maxKwIndex] ?? `kw[${maxKwIndex}]`;
+  const topKeywords = kwScores
+    .map((s, i) => ({ keyword: e.keywords?.[i] ?? `kw[${i}]`, score: s }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, TOP_KEYWORDS_COUNT);
+  return { entry: e, score, matchedLabel, titleScore: embScore, topKeywords };
 }
 
 export function useSemanticSearch(
@@ -59,27 +82,7 @@ export function useSemanticSearch(
         const outQuery = await extractor(`query: ${q}`, { pooling: 'mean', normalize: true });
         if (cancelled) return;
         const queryVec = Array.from(outQuery.data as Float32Array);
-        const scored = entries.map((e) => {
-          const embScore = cosineSimilarity(queryVec, e.embedding);
-          const kwScores = (e.keyword_embeddings ?? []).map((kw) => cosineSimilarity(queryVec, kw));
-          const top3 =
-            kwScores.length > 0
-              ? kwScores
-                  .slice()
-                  .sort((a, b) => b - a)
-                  .slice(0, 3)
-              : [];
-          const geoValues = [...top3, embScore];
-          const score = Math.exp(geoValues.reduce((s, v) => s + Math.log(v), 0) / geoValues.length);
-          const maxKwScore = kwScores.length > 0 ? Math.max(...kwScores) : embScore;
-          const maxKwIndex = kwScores.indexOf(maxKwScore);
-          const matchedLabel = e.keywords?.[maxKwIndex] ?? `kw[${maxKwIndex}]`;
-          const topKeywords = kwScores
-            .map((s, i) => ({ keyword: e.keywords?.[i] ?? `kw[${i}]`, score: s }))
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 3);
-          return { entry: e, score, matchedLabel, titleScore: embScore, topKeywords };
-        });
+        const scored = entries.map((e) => scoreEntry(queryVec, e));
         scored.sort((a, b) => b.score - a.score);
         setResults(
           scored.slice(0, SEARCH_LIMIT).map((s) => ({
