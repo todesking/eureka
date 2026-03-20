@@ -5,6 +5,7 @@ import type { Entry } from './useData';
 const SEARCH_LIMIT = 50;
 const TOP_KEYWORDS_COUNT = 3;
 const EPSILON = 1e-6;
+const TITLE_WEIGHT = 2;
 
 export type SearchResult = Entry & {
   score?: number;
@@ -43,7 +44,7 @@ function scoreEntry(queryVec: number[], e: Entry) {
           .sort((a, b) => b - a)
           .slice(0, TOP_KEYWORDS_COUNT)
       : [];
-  const geoValues = [...topKw, embScore];
+  const geoValues = [...topKw, ...Array<number>(TITLE_WEIGHT).fill(embScore)];
   const score = Math.exp(geoValues.reduce((s, v) => s + Math.log(v), 0) / geoValues.length);
   const maxKwScore = kwScores.length > 0 ? Math.max(...kwScores) : embScore;
   const maxKwIndex = kwScores.indexOf(maxKwScore);
