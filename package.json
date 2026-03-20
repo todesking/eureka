@@ -12,7 +12,7 @@
     "format": "prettier --write src scripts",
     "format:check": "prettier --check src scripts",
     "check": "tsc --noEmit && eslint && prettier --check src scripts",
-    "deploy": "npm run build && gh-pages -d dist"
+    "deploy": "npm run build && gh-pages -d dist -f"
   },
   "devDependencies": {
     "@eslint/css": "^1.0.0",
