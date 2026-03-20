@@ -76,18 +76,33 @@ async function main() {
     );
   }
 
+  const rawByUrl = new Map(rawEntries.map((e) => [e.url, e]));
+
   const newEntries: Entry[] = [];
   let updatedCount = 0;
   let skipped = 0;
   for (const entry of existingEntries) {
-    const needsKeywords = !entry.keywords.length;
-    const needsKwEmbed = !entry.keyword_embeddings.length;
-    if (!needsKeywords && !needsKwEmbed) continue;
+    const raw = rawByUrl.get(entry.url);
+    const featureChanged = raw != null && raw.feature !== entry.feature;
+    const needsKeywords = featureChanged || !entry.keywords.length;
+    const needsKwEmbed = featureChanged || !entry.keyword_embeddings.length;
+    const needsEmbedding = featureChanged;
+    if (!needsKeywords && !needsKwEmbed && !needsEmbedding) continue;
+
+    if (featureChanged) {
+      console.log(`[update-feature] ${entry.title}: "${entry.feature}" → "${raw!.feature}"`);
+      entry.feature = raw!.feature;
+    }
 
     const concept = extractConcept(entry.feature);
-    console.log(`[update] ${entry.title} / ${concept}`);
+    if (!featureChanged) console.log(`[update] ${entry.title} / ${concept}`);
 
     try {
+      if (needsEmbedding) {
+        const out = await extractor('query: ' + concept, { pooling: 'mean', normalize: true });
+        entry.embedding = Array.from(out.data as Float32Array);
+      }
+
       if (needsKeywords) {
         entry.keywords = await extractKeywords(concept, apiKey);
         console.log(`  keywords: ${entry.keywords.join(', ')}`);
