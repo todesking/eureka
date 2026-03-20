@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useData } from './useData';
 import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
@@ -58,12 +58,12 @@ export default function SearchPage() {
       className={!showResults ? 'w-full max-w-xl px-6' : undefined}
     >
       <h1 className="mb-3">
-        <a href="/" className="group inline-flex items-baseline gap-3 hover:opacity-80">
+        <Link to="/" className="group inline-flex items-baseline gap-3 hover:opacity-80">
           <span className="font-mincho text-2xl font-bold tracking-wider text-[rgb(0,64,134)]">
             ユリイカ・現代思想
           </span>
           <span className="text-xs font-normal tracking-[0.3em] text-zinc-400">特集検索</span>
-        </a>
+        </Link>
       </h1>
       <form
         onSubmit={(e) => {
@@ -104,7 +104,10 @@ export default function SearchPage() {
   if (!showResults) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white text-zinc-900">
-        {inputArea}
+        <div className="flex flex-col items-center gap-4">
+          {inputArea}
+          <p className="text-xs text-zinc-400">※ 初回検索時に約200MBのデータをダウンロードします</p>
+        </div>
       </div>
     );
   }
