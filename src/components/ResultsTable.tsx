@@ -25,7 +25,7 @@ export function ResultsTable({ results, debug }: { results: SearchResult[]; debu
                     {entry.title}
                     {label && <span className="font-mincho ml-2 font-bold">{label}</span>}
                   </div>
-                  <div className="mt-0.5 w-full overflow-x-hidden">
+                  <div className="mt-0.5 w-full overflow-x-clip">
                     <FitText>{featureTitle}</FitText>
                   </div>
                 </a>
