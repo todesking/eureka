@@ -32,7 +32,7 @@ JSONの形式:
 特集: {CONCEPT}
 `;
 
-const MODEL = 'arcee-ai/trinity-large-preview:free';
+const MODEL = 'nvidia/nemotron-3-super-120b-a12b:free';
 const TIMEOUT_MS = 30_000;
 const MAX_RETRIES = 5;
 
@@ -84,6 +84,9 @@ export async function extractKeywords(
         body,
         signal: controller.signal,
       });
+      if (res.status !== 200) {
+        throw new Error(`Error response: ${res.status} ${await res.text()}`);
+      }
       const json = (await res.json()) as Response;
       clearTimeout(timer);
       const message = json.choices[0].message;

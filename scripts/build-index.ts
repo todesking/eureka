@@ -147,7 +147,7 @@ async function main() {
       }
     } catch (err) {
       skipped++;
-      console.error(`  [skip] failed to embed: ${err instanceof Error ? err.message : err}`);
+      console.error(`  [skip] failed to embed: ${err instanceof Error ? err.message : err}`, err);
     }
   }
 
