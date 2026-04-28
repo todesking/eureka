@@ -33,7 +33,7 @@ JSONの形式:
 `;
 
 const MODEL = 'nvidia/nemotron-3-super-120b-a12b:free';
-const TIMEOUT_MS = 30_000;
+const TIMEOUT_MS = 60_000;
 const MAX_RETRIES = 5;
 
 export async function extractKeywords(
